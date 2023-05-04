@@ -101,6 +101,7 @@ def act(
                 time.sleep(.1)  # Adjust the sleep duration as needed
             
             chatbot_for_display.append(grounder_returned_chatbot_msg)
+
         elif gpt_response_json["command"]["name"] == "finish_grounding":
             image_id = gpt_response_json["command"]["args"]["image_id"]
             chatbot_for_display.append(
@@ -219,7 +220,6 @@ def ask_gpt(
         if chunk.decode():
             chunk = chunk.decode()
             # decode each line as response data is in bytes
-            print("######### chunk: ", chunk)
             if (
                 len(chunk) > 12
                 and "content" in json.loads(chunk[6:])["choices"][0]["delta"]

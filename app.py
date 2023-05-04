@@ -61,12 +61,12 @@ with gr.Blocks(
                 visible=False,
             )
         with gr.Row():
-            # with gr.Column(scale=5):
-            #     model_3d = gr.Model3D(
-            #         value="3d_asset/poly.glb",
-            #         clear_color=[0.0, 0.0, 0.0, 0.0],
-            #         label="3D Model",
-            #     )
+            with gr.Column(scale=5):
+                model_3d = gr.Model3D(
+                    value="3d_asset/poly.glb",
+                    clear_color=[0.0, 0.0, 0.0, 0.0],
+                    label="3D Model",
+                )
             with gr.Column(scale=5):
                 chatbot_for_display = gr.Chatbot(label="GPT4", elem_id="chatbot")
 
