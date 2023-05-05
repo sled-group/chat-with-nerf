@@ -81,7 +81,11 @@ def act(
                 grounder_returned_chatbot_msg = chatbot_msg_for_user
 
             threading.Thread(
-                target=ground_with_callback, args=(ground_text, grounding_callback)
+                target=ground_with_callback,
+                args=(
+                    ground_text,
+                    grounding_callback,
+                ),
             ).start()
 
             # while grounder is running, display a loading message

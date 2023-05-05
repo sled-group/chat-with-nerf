@@ -1,29 +1,19 @@
-import requests
-
 from nerf_grounding_chat_interface import logger
+from nerf_grounding_chat_interface.visual_grounder.main import visual_grounder
+from nerf_grounding_chat_interface.chat.config import Config
 
 
-def ground(ground_text: str) -> list[tuple[str, str]]:
+def ground(
+    ground_text: str,
+) -> list[tuple[str, str]]:
     # Set the API URL
     logger.info(f"Ground Text: {ground_text}")
-    url = "http://localhost:7009/visualground/" + ground_text
-
-    # Make an HTTP GET request
-    response = requests.get(url)
-
-    # Check the status code
-    if response.status_code == 200:
-        # Parse the response data (assuming it's JSON)
-        data = response.json()
-
-        # Do something with the data, e.g., print it
-        logger.info(f"Input value: {data}")
-    else:
-        logger.error(f"Request failed with status code {response.status_code}")
-        raise ValueError(f"Request failed with status code {response.status_code}")
-
+    visualGrounder = Config.visualGrounder
+    blip2captioner = Config.blip2captioner
+    pipeline = Config.pipeline
+    response = visual_grounder(ground_text, visualGrounder, blip2captioner, pipeline)
     result = []
-    for img_path, img_caption in data.items():
+    for img_path, img_caption in response:
         # Gradio uses http://localhost:7777/file=/absolute/path/example.jpg to access files,
         # can use relative too, just drop the leading slash
         result.append((f"{img_path}", img_caption[0]))
@@ -31,6 +21,17 @@ def ground(ground_text: str) -> list[tuple[str, str]]:
     return result
 
 
-def ground_with_callback(ground_text, callback):
-    result = ground(ground_text)
+def ground_with_callback(
+    ground_text,
+    callback,
+    visual_grounder,
+    blip2captioner,
+    pipeline,
+):
+    result = ground(
+        ground_text,
+        visual_grounder,
+        blip2captioner,
+        pipeline,
+    )
     callback(result)
