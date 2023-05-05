@@ -1,8 +1,9 @@
 # Adapted from https://huggingface.co/spaces/ysharma/ChatGPT4
 
-import agent
 import gradio as gr
-from system_prompt import DEFAULT_SYSTEM_PROMPT
+
+from nerf_grounding_chat_interface import agent
+from nerf_grounding_chat_interface.system_prompt import DEFAULT_SYSTEM_PROMPT
 
 
 # Resetting to blank
@@ -68,7 +69,7 @@ with gr.Blocks(
         with gr.Row():
             with gr.Column(scale=5):
                 model_3d = gr.Model3D(
-                    value="3d_asset/poly.glb",
+                    value="/workspace/nerf-grounding-chat-interface/3d_asset/poly.glb",
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="3D Model",
                 )

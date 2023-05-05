@@ -4,13 +4,17 @@ import threading
 import time
 
 import requests
-from grounder import ground_with_callback
+from gradio import Chatbot
+
+from nerf_grounding_chat_interface.grounder import ground_with_callback
 
 # Streaming endpoint
-API_URL = os.getenv("API_URL")
+API_URL = str(os.getenv("API_URL"))
+assert API_URL, "API_URL environment variable is not set"
 
 # Huggingface provided GPT4 OpenAI API Key
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY = str(os.getenv("OPENAI_API_KEY"))
+assert OPENAI_API_KEY, "OPENAI_API_KEY environment variable is not set"
 
 MAX_ITERATION = 10
 
@@ -23,7 +27,7 @@ def act(
     temperature,
     chat_counter,
     gpt_chat_state=[],
-    chatbot_for_display=[],
+    chatbot_for_display: Chatbot = [],
 ):
     give_control_to_user = False
     for _ in range(MAX_ITERATION):  # iterate until GPT decides to give control to user
@@ -65,18 +69,16 @@ def act(
             # use a separate thread to do grounding since it takes a while
             grounder_returned_chatbot_msg = None
 
-            def grounding_callback(grounder_results):
+            def grounding_callback(grounder_results: list[tuple[str, str]]):
                 # this function is called when the grounder finishes
                 nonlocal grounder_returned_chatbot_msg, inputs, give_control_to_user
-                markdown_for_user, pure_text_for_gpt = display_grounder_results(
+                chatbot_msg_for_user, pure_text_for_gpt = display_grounder_results(
                     grounder_results
                 )
                 inputs = pure_text_for_gpt
                 give_control_to_user = False
-                grounder_returned_chatbot_msg = (
-                    None,
-                    markdown_for_user,
-                )  # this must be last line to ensure thread safety
+                # this must be last line to ensure thread safety
+                grounder_returned_chatbot_msg = chatbot_msg_for_user
 
             threading.Thread(
                 target=ground_with_callback, args=(ground_text, grounding_callback)
@@ -96,7 +98,7 @@ def act(
                 yield chatbot_for_display, gpt_chat_state, chat_counter, response
                 time.sleep(0.5)  # Adjust the sleep duration as needed
 
-            chatbot_for_display.append(grounder_returned_chatbot_msg)
+            chatbot_for_display.extend(grounder_returned_chatbot_msg)
 
         elif gpt_response_json["command"]["name"] == "finish_grounding":
             image_id = gpt_response_json["command"]["args"]["image_id"]
@@ -113,14 +115,17 @@ def act(
 
 def display_grounder_results(
     grounder_results: list[tuple[str, str]]
-) -> tuple[str, str]:
+) -> tuple[list[tuple[None, str | tuple]], str]:
     """Display grounder results in markdown format."""
-    markdown_for_user = ""
+    chatbot_msg_for_user: list[tuple[None, str | tuple]] = []
     pure_text_for_gpt = ""
     for i, (img_path, caption) in enumerate(grounder_results):
-        markdown_for_user += f"![{caption}]({img_path})\nImage {i+1}: {caption}\n"
+        chatbot_msg_for_user += [
+            (None, f"Image {i+1}: {caption}"),
+            (None, (img_path, caption)),
+        ]
         pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
-    return markdown_for_user, pure_text_for_gpt
+    return chatbot_msg_for_user, pure_text_for_gpt
 
 
 def ask_gpt(
@@ -130,7 +135,7 @@ def ask_gpt(
     temperature,
     chat_counter,
     gpt_chat_state=[],
-    chatbot_for_display=[],
+    chatbot_for_display: Chatbot = [],
 ):
     headers = {
         "Content-Type": "application/json",
