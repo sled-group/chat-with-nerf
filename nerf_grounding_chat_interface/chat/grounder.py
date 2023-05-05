@@ -1,6 +1,6 @@
 import requests
 
-from nerf_grounding_chat_interface.chat import logger
+from nerf_grounding_chat_interface import logger
 
 
 def ground(ground_text: str) -> list[tuple[str, str]]:
@@ -19,7 +19,8 @@ def ground(ground_text: str) -> list[tuple[str, str]]:
         # Do something with the data, e.g., print it
         logger.info(f"Input value: {data}")
     else:
-        logger.info(f"Request failed with status code {response.status_code}")
+        logger.error(f"Request failed with status code {response.status_code}")
+        raise ValueError(f"Request failed with status code {response.status_code}")
 
     result = []
     for img_path, img_caption in data.items():
