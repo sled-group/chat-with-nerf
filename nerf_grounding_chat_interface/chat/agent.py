@@ -6,7 +6,7 @@ import time
 import requests
 from gradio import Chatbot
 
-from nerf_grounding_chat_interface.grounder import ground_with_callback
+from nerf_grounding_chat_interface.chat.grounder import ground_with_callback
 
 # Streaming endpoint
 API_URL = str(os.getenv("API_URL"))

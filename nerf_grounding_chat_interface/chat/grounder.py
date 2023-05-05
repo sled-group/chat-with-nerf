@@ -1,6 +1,6 @@
 import requests
 
-from nerf_grounding_chat_interface import logger
+from nerf_grounding_chat_interface.chat import logger
 
 
 def ground(ground_text: str) -> list[tuple[str, str]]:

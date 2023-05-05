@@ -2,8 +2,8 @@
 
 import gradio as gr
 
-from nerf_grounding_chat_interface import agent
-from nerf_grounding_chat_interface.system_prompt import DEFAULT_SYSTEM_PROMPT
+from nerf_grounding_chat_interface.chat import agent
+from nerf_grounding_chat_interface.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
 
 
 # Resetting to blank
