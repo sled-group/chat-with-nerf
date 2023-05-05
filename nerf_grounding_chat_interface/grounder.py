@@ -1,12 +1,12 @@
-from typing import Tuple, List
-from gradio_client import utils as client_utils
-import requests
 import logging
+
+import requests
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
-def ground(ground_text: str) -> List[Tuple[str, str]]:
+
+def ground(ground_text: str) -> list[tuple[str, str]]:
     # Set the API URL
     logging.info(f"Ground Text: {ground_text}")
     url = "http://localhost:7009/visualground/" + ground_text
@@ -23,11 +23,13 @@ def ground(ground_text: str) -> List[Tuple[str, str]]:
         logging.info(f"Input value: {data}")
     else:
         logging.info(f"Request failed with status code {response.status_code}")
-    
+
     result = []
-    for data_key in data.keys():
-        result.append((client_utils.encode_url_or_file_to_base64(data_key), data[data_key]))
-        
+    for img_path, img_caption in data.items():
+        # Gradio uses http://localhost:7777/file=/absolute/path/example.jpg to access files,
+        # can use relative too, just drop the leading slash
+        result.append((f"/file={img_path}", img_caption[0]))
+
     return result
     # return [
     #     (
@@ -39,6 +41,7 @@ def ground(ground_text: str) -> List[Tuple[str, str]]:
     #         "a loveseat with a pillow on top, white cover and yellow accent, metallic legs",
     #     ),
     # ]
+
 
 def ground_with_callback(ground_text, callback):
     result = ground(ground_text)

@@ -1,8 +1,7 @@
 # Adapted from https://huggingface.co/spaces/ysharma/ChatGPT4
 
-import gradio as gr
-
 import agent
+import gradio as gr
 from system_prompt import DEFAULT_SYSTEM_PROMPT
 
 
@@ -29,8 +28,11 @@ title = """<h1 align="center">🔥Chat with NeRF using GPT-4🚀</h1>"""
 
 
 # Using info to add additional information about System message in GPT4
-system_msg_info = """A conversation could begin with a system message to gently instruct the assistant. 
-System message helps set the behavior of the AI Assistant. For example, the assistant could be instructed with 'You are a helpful assistant.'"""
+system_msg_info = (
+    "A conversation could begin with a system message to gently instruct the assistant. "
+    "System message helps set the behavior of the AI Assistant. "
+    "For example, the assistant could be instructed with 'You are a helpful assistant."
+)
 
 default_system_msg = DEFAULT_SYSTEM_PROMPT
 
@@ -43,7 +45,10 @@ theme = gr.themes.Soft(
 )
 
 with gr.Blocks(
-    css="""#col_container { margin-left: auto; margin-right: auto;} #chatbot {height: 520px; overflow: auto;}""",
+    css=(
+        "#col_container { margin-left: auto; margin-right: auto;} #chatbot {height: 520px; "
+        "overflow: auto;}"
+    ),
     # theme=theme,
 ) as demo:
     gr.HTML(title)

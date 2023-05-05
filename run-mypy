@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -e
+
+# Install the dependencies into the mypy environment.
+# Note that this can take seconds to run.
+pip install --editable . --no-input --quiet
+
+mypy --follow-imports=silent --ignore-missing-imports --show-column-numbers $@

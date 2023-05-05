@@ -1,24 +1,10 @@
-import os
 import json
-from typing import List, Tuple
+import os
+import threading
+import time
+
 import requests
 from grounder import ground_with_callback
-from datetime import datetime
-import time
-import threading
-
-
-import logging
-
-import http.client
-http.client.HTTPConnection.debuglevel = 1
-
-# You must initialize logging, otherwise you'll not see debug output.
-logging.basicConfig()
-logging.getLogger().setLevel(logging.DEBUG)
-requests_log = logging.getLogger("requests.packages.urllib3")
-requests_log.setLevel(logging.DEBUG)
-requests_log.propagate = True
 
 # Streaming endpoint
 API_URL = os.getenv("API_URL")
@@ -53,7 +39,6 @@ def act(
             gpt_chat_state,
             chatbot_for_display,
         ):
-            print("#### time: ", datetime.now().strftime("%H:%M:%S"))
             yield chatbot_for_display, gpt_chat_state, chat_counter, response
 
         # done streaming
@@ -76,30 +61,41 @@ def act(
             give_control_to_user = True
         elif gpt_response_json["command"]["name"] == "ground":
             ground_text = gpt_response_json["command"]["args"]["ground_text"]
-        
+
+            # use a separate thread to do grounding since it takes a while
             grounder_returned_chatbot_msg = None
+
             def grounding_callback(grounder_results):
+                # this function is called when the grounder finishes
                 nonlocal grounder_returned_chatbot_msg, inputs, give_control_to_user
-                markdown_for_user, pure_text_for_gpt = display_grounder_results(grounder_results)
-                grounder_returned_chatbot_msg = (None, markdown_for_user)
+                markdown_for_user, pure_text_for_gpt = display_grounder_results(
+                    grounder_results
+                )
                 inputs = pure_text_for_gpt
                 give_control_to_user = False
+                grounder_returned_chatbot_msg = (
+                    None,
+                    markdown_for_user,
+                )  # this must be last line to ensure thread safety
 
-            threading.Thread(target=ground_with_callback, args=(ground_text, grounding_callback)).start()
+            threading.Thread(
+                target=ground_with_callback, args=(ground_text, grounding_callback)
+            ).start()
 
+            # while grounder is running, display a loading message
             dot_counter = 0
             first_iteration = True
             while grounder_returned_chatbot_msg is None:
                 dot_counter = (dot_counter + 1) % 4
-                dots = '.' * dot_counter
+                dots = "." * dot_counter
                 if first_iteration:
                     chatbot_for_display.append((None, f"SYSTEM: I'm thinking{dots}"))
                     first_iteration = False
                 else:
                     chatbot_for_display[-1] = (None, f"SYSTEM: I'm thinking{dots}")
                 yield chatbot_for_display, gpt_chat_state, chat_counter, response
-                time.sleep(.1)  # Adjust the sleep duration as needed
-            
+                time.sleep(0.5)  # Adjust the sleep duration as needed
+
             chatbot_for_display.append(grounder_returned_chatbot_msg)
 
         elif gpt_response_json["command"]["name"] == "finish_grounding":
@@ -116,9 +112,9 @@ def act(
 
 
 def display_grounder_results(
-    grounder_results: List[Tuple[str, str]]
-) -> Tuple[str, str]:
-    """Display grounder results in markdown format"""
+    grounder_results: list[tuple[str, str]]
+) -> tuple[str, str]:
+    """Display grounder results in markdown format."""
     markdown_for_user = ""
     pure_text_for_gpt = ""
     for i, (img_path, caption) in enumerate(grounder_results):
@@ -169,7 +165,7 @@ def ask_gpt(
         }
         print(f"chat_counter - {chat_counter}")
     else:  # if chat_counter != 0 :
-        messages = multi_turn_message  # Of the type of - [{"role": "system", "content": system_msg},]
+        messages = multi_turn_message  # Of the type: [{"role": "system", "content": system_msg},]
         for data in gpt_chat_state:
             user = {}
             user["role"] = "user"
