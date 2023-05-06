@@ -4,14 +4,6 @@ import gradio as gr
 
 from nerf_grounding_chat_interface.chat import agent
 from nerf_grounding_chat_interface.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
-from nerf_grounding_chat_interface.visual_grounder.main import initialize
-from nerf_grounding_chat_interface.chat.config import Config
-
-# initialize the blipv2 and LERF
-visual_grounder, blip2captioner, pipeline = initialize()
-
-global config_models
-config_models = Config(visual_grounder, blip2captioner, pipeline)
 
 
 # Resetting to blank

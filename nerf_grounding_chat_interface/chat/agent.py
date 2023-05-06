@@ -7,6 +7,9 @@ import requests
 from gradio import Chatbot
 
 from nerf_grounding_chat_interface.chat.grounder import ground_with_callback
+from nerf_grounding_chat_interface.visual_grounder import get_model_context
+
+model_context = get_model_context()
 
 # Streaming endpoint
 API_URL = str(os.getenv("API_URL"))
@@ -69,7 +72,7 @@ def act(
             # use a separate thread to do grounding since it takes a while
             grounder_returned_chatbot_msg = None
 
-            def grounding_callback(grounder_results: list[tuple[str, str]]):
+            def grounding_callback(grounder_results: list[tuple[str, str]]) -> None:
                 # this function is called when the grounder finishes
                 nonlocal grounder_returned_chatbot_msg, inputs, give_control_to_user
                 chatbot_msg_for_user, pure_text_for_gpt = display_grounder_results(
@@ -84,6 +87,9 @@ def act(
                 target=ground_with_callback,
                 args=(
                     ground_text,
+                    model_context.visualGrounder,
+                    model_context.blip2captioner,
+                    model_context.pipeline,
                     grounding_callback,
                 ),
             ).start()

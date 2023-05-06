@@ -1,7 +1,9 @@
 import torch
-from PIL import Image
+from attrs import Factory, define
 from lavis.models import load_model_and_preprocess  # type: ignore
-from attrs import define
+from PIL import Image
+
+from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
 
 
 @define
@@ -14,29 +16,35 @@ class Blip2Captioner:
         is_eval=True,
         device=device,
     )
+    images: list[ImageRef] = Factory(list)
 
     def set_positive_words(self, new_positive_words):
         self.positive_words = new_positive_words
 
     # for the general 6 images pipeline
-    def load_images(self, selected):
+    def load_images(self, selected: list[ImageRef]) -> None:
         # load sample image
-        self.images = {}
-        for selected_item in selected:
-            raw_image = Image.open(selected_item.getRGBAddress()).convert("RGB")
+        for image_ref in selected:
+            raw_image = Image.open(image_ref.rgb_address).convert("RGB")
             raw_image.resize((596, 437))
-            self.images[selected_item] = raw_image
+            image_ref.raw_image = raw_image
+        self.images = selected
 
     # for the general 6 images pipeline
-    def blip2caption(self):
+    def blip2caption(self) -> dict[str, str]:
+        """_summary_
+
+        :return: a dictionary of image path and its corresponding caption
+        :rtype: dict[str, str]
+        """
         # TODO: batch it.
         # prepare the image
-        result = {}
-        for image_item in self.images.keys():
+        result: dict[str, str] = {}  # key: rgb_address, value: caption
+        for image_ref in self.images:
             # path = image_item.getRGBAddress()
             # print("path in blip2caption: ", path)
             image = (
-                self.vis_processors["eval"](self.images[image_item])
+                self.vis_processors["eval"](image_ref.raw_image)
                 .unsqueeze(0)
                 .to(self.device)
             )
@@ -46,8 +54,8 @@ class Blip2Captioner:
                 + " focusing on color, size, shape and other features in this image?"
                 + "Please answer in the sentence format. Answer:"
             )
-            answer = self.model.generate({"image": image, "prompt": question})
-            result[image_item.getRGBAddress()] = answer
+            answer = self.model.generate({"image": image, "prompt": question})[0]
+            result[image_ref.rgb_address] = answer
 
         return result
 

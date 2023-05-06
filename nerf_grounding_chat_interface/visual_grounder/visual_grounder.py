@@ -1,31 +1,25 @@
 #!/usr/bin/env python
-"""
-Visual Grounder
-"""
+"""Visual Grounder."""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
+
 import matplotlib.pyplot as plt  # type: ignore
 import mediapy as media
 import numpy as np
 import torch
-from rich.console import Console
-from nerfstudio.cameras.camera_paths import (
-    get_path_from_json,
-)
+from nerfstudio.cameras.camera_paths import get_path_from_json
 from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.data.scene_box import SceneBox
 from nerfstudio.model_components import renderers
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils import install_checks
 from nerfstudio.utils.eval_utils import eval_setup
+from rich.console import Console
+
+from nerf_grounding_chat_interface.visual_grounder.crop import CropData
 from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
-from nerf_grounding_chat_interface.visual_grounder.crop import (
-    CropData,
-    get_crop_from_json,
-)
 
 CONSOLE = Console(width=120)
 
@@ -37,7 +31,7 @@ class VisualGrounder:
         self.output_path = output_path
         """Output path."""
         self.camera_poses = camera_poses
-        """Determined camera poses"""
+        """Determined camera poses."""
         self.downscale_factor = 1
         """Scaling factor to apply to the camera image resolution."""
         self.eval_num_rays_per_chunk = None
@@ -64,7 +58,7 @@ class VisualGrounder:
         except Exception:
             return False
 
-    def taking_pictures(self, pipeline: Pipeline):
+    def taking_pictures(self, pipeline: Pipeline) -> list[ImageRef]:
         install_checks.check_ffmpeg_installed()
         print("picture taking process")
         camera_photo = self.camera_poses
@@ -88,8 +82,8 @@ class VisualGrounder:
         pipeline: Pipeline,
         cameras: Cameras,
         output_filename: str,
-        rendered_output_names: List[str],
-        crop_data: Optional[CropData] = None,
+        rendered_output_names: list[str],
+        crop_data: CropData | None = None,
         rendered_resolution_scaling_factor: float = 1.0,
         camera_type: CameraType = CameraType.PERSPECTIVE,
     ) -> list[ImageRef]:
@@ -162,10 +156,10 @@ class VisualGrounder:
                 if output_image.shape[-1] == 1:
                     output_image = np.concatenate((output_image,) * 3, axis=-1)
                 render_image.append(output_image)
-            render_image = np.concatenate(render_image, axis=1)
+            render_image_concat = np.concatenate(render_image, axis=1)
 
-            rgb0 = render_image[:, :512, :]
-            relevancy0 = render_image[:, 512:, :]
+            rgb0 = render_image_concat[:, :512, :]
+            relevancy0 = render_image_concat[:, 512:, :]
             grayscale_data = np.mean(relevancy0, axis=2)
 
             # saving rgb
