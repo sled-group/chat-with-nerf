@@ -1,6 +1,5 @@
 import torch
 from attrs import Factory, define
-from lavis.models import load_model_and_preprocess  # type: ignore
 from PIL import Image
 
 from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
@@ -8,14 +7,15 @@ from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
 
 @define
 class Blip2Captioner:
+    model: torch.nn.Module
+    """BLIP-2 model for captioning."""
+    vis_processors: dict
+    """Preprocessors for visual inputs.
+
+    txt_processors
+    """
     positive_words: str = "computer"
-    device = torch.device("cuda") if torch.cuda.is_available() else "cpu"
-    model, vis_processors, _ = load_model_and_preprocess(
-        name="blip2_t5",
-        model_type="pretrain_flant5xxl",
-        is_eval=True,
-        device=device,
-    )
+
     images: list[ImageRef] = Factory(list)
 
     def set_positive_words(self, new_positive_words):
@@ -46,7 +46,7 @@ class Blip2Captioner:
             image = (
                 self.vis_processors["eval"](image_ref.raw_image)
                 .unsqueeze(0)
-                .to(self.device)
+                .to(self.model.device)
             )
             question = (
                 "Question: Describe the "
@@ -54,7 +54,7 @@ class Blip2Captioner:
                 + " focusing on color, size, shape and other features in this image?"
                 + "Please answer in the sentence format. Answer:"
             )
-            answer = self.model.generate({"image": image, "prompt": question})[0]
+            answer = self.model.generate({"image": image, "prompt": question})[0]  # type: ignore
             result[image_ref.rgb_address] = answer
 
         return result
@@ -62,6 +62,8 @@ class Blip2Captioner:
     def blip2vqa(self, image_path, question):
         raw_image = Image.open(image_path).convert("RGB")
         raw_image.resize((596, 437))
-        image = self.vis_processors["eval"](raw_image).unsqueeze(0).to(self.device)
+        image = (
+            self.vis_processors["eval"](raw_image).unsqueeze(0).to(self.model.device)
+        )
         answer = self.model.generate({"image": image, "prompt": question})
         return answer

@@ -9,13 +9,13 @@ import matplotlib.pyplot as plt  # type: ignore
 import mediapy as media
 import numpy as np
 import torch
+from attrs import define
 from nerfstudio.cameras.camera_paths import get_path_from_json
 from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.data.scene_box import SceneBox
 from nerfstudio.model_components import renderers
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils import install_checks
-from nerfstudio.utils.eval_utils import eval_setup
 from rich.console import Console
 
 from nerf_grounding_chat_interface.visual_grounder.crop import CropData
@@ -24,41 +24,29 @@ from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
 CONSOLE = Console(width=120)
 
 
+@define
 class VisualGrounder:
-    def __init__(self, load_config, output_path, camera_poses):
-        self.load_config = load_config
-        """Path to config YAML file."""
-        self.output_path = output_path
-        """Output path."""
-        self.camera_poses = camera_poses
-        """Determined camera poses."""
-        self.downscale_factor = 1
-        """Scaling factor to apply to the camera image resolution."""
-        self.eval_num_rays_per_chunk = None
-        """Specifies number of rays per chunk during eval."""
+    output_path: str
+    """Output path."""
+    camera_poses: dict
+    """Determined camera poses."""
+    lerf_pipeline: Pipeline
+    """LERF pipeline."""
+    downscale_factor: float = 1
+    """Scaling factor to apply to the camera image resolution."""
+    eval_num_rays_per_chunk: int | None = None
+    """Specifies number of rays per chunk during eval."""
 
-    def construct_pipeline(self) -> Pipeline:
-        """Main function."""
-        _, pipeline, _, _ = eval_setup(
-            Path(
-                "/workspace/inthewild/outputs/bigexample/lerf/2023-04-22_022439/config.yml"
-            ),
-            eval_num_rays_per_chunk=None,
-            test_mode="test",
-        )
-
-        return pipeline
-
-    def set_positive_words(self, pipeline: Pipeline, positive_word: str) -> bool:
+    def set_positive_words(self, positive_word: str) -> bool:
         positive_word_list = [positive_word]
 
         try:
-            pipeline.image_encoder.set_positives(positive_word_list)
+            self.lerf_pipeline.image_encoder.set_positives(positive_word_list)
             return True
         except Exception:
             return False
 
-    def taking_pictures(self, pipeline: Pipeline) -> list[ImageRef]:
+    def taking_pictures(self) -> list[ImageRef]:
         install_checks.check_ffmpeg_installed()
         print("picture taking process")
         camera_photo = self.camera_poses
@@ -67,7 +55,6 @@ class VisualGrounder:
         camera_type = CameraType.PERSPECTIVE
         print("sub picture taking process")
         result = self._taking_picture(
-            pipeline,
             camera_path,
             output_filename=self.output_path,
             rendered_output_names=["rgb", "relevancy_0"],
@@ -79,7 +66,6 @@ class VisualGrounder:
 
     def _taking_picture(
         self,
-        pipeline: Pipeline,
         cameras: Cameras,
         output_filename: str,
         rendered_output_names: list[str],
@@ -90,7 +76,6 @@ class VisualGrounder:
         """Helper function to create 6 pictures of a given scene.
 
         Args:
-            pipeline: Pipeline to evaluate with.
             cameras: Cameras to render.
             output_filename: Name of the output file.
             rendered_output_names: List of outputs to visualise.
@@ -101,7 +86,7 @@ class VisualGrounder:
         """
         CONSOLE.print("[bold green]Taking 6 images... ")
         cameras.rescale_output_resolution(rendered_resolution_scaling_factor)
-        cameras = cameras.to(pipeline.device)
+        cameras = cameras.to(self.lerf_pipeline.device)
         output_filepath_path = Path(output_filename)
         rgb_image_dir = output_filepath_path.parent / "rgb"
         clip_image_dir = output_filepath_path.parent / "clip"
@@ -119,7 +104,7 @@ class VisualGrounder:
                 bounding_box_max = crop_data.center + crop_data.scale / 2.0
                 aabb_box = SceneBox(
                     torch.stack([bounding_box_min, bounding_box_max]).to(
-                        pipeline.device
+                        self.lerf_pipeline.device
                     )
                 )
             camera_ray_bundle = cameras.generate_rays(
@@ -128,15 +113,19 @@ class VisualGrounder:
 
             if crop_data is not None:
                 with renderers.background_color_override_context(
-                    crop_data.background_color.to(pipeline.device)
+                    crop_data.background_color.to(self.lerf_pipeline.device)
                 ), torch.no_grad():
-                    outputs = pipeline.model.get_outputs_for_camera_ray_bundle(
-                        camera_ray_bundle
+                    outputs = (
+                        self.lerf_pipeline.model.get_outputs_for_camera_ray_bundle(
+                            camera_ray_bundle
+                        )
                     )
             else:
                 with torch.no_grad():
-                    outputs = pipeline.model.get_outputs_for_camera_ray_bundle(
-                        camera_ray_bundle
+                    outputs = (
+                        self.lerf_pipeline.model.get_outputs_for_camera_ray_bundle(
+                            camera_ray_bundle
+                        )
                     )
 
             render_image = []
