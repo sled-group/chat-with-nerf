@@ -1,42 +1,53 @@
 import pytest
 
 from nerf_grounding_chat_interface.chat.grounder import ground
+from nerf_grounding_chat_interface.visual_grounder.blip2_caption import Blip2Captioner
+from nerf_grounding_chat_interface.visual_grounder.visual_grounder import VisualGrounder
 
 
-@pytest.mark.parametrize("status_code", [500, 404, 400])
-def test_ground_request_failure(mocker, status_code):
-    # Mock the requests.get function
-    mock_get = mocker.patch("requests.get")
-
-    # Create a failed response object with a status code of 400
-    mock_response = mocker.Mock()
-    mock_response.status_code = status_code
-
-    # Configure the mock get function to return the mock response
-    mock_get.return_value = mock_response
-
-    # Call the ground function and check if it raises the expected exception
-    with pytest.raises(
-        ValueError, match="Request failed with status code " + str(status_code)
-    ):
-        ground("sample_text")
+# Mock the necessary classes and functions for the test cases
+class MockVisualGrounder(VisualGrounder):
+    pass
 
 
-def test_ground_success(mocker):
-    # Mock the requests.get function
-    mock_get = mocker.patch("requests.get")
+class MockBlip2Captioner(Blip2Captioner):
+    pass
 
-    # Create a successful response object with a status code of 200 and JSON data
-    mock_response = mocker.Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "/img1.jpg": ["caption1"],
-        "/img2.jpg": ["caption2"],
-    }
 
-    # Configure the mock get function to return the mock response
-    mock_get.return_value = mock_response
+# Pytest fixtures for the ground method arguments
+@pytest.fixture
+def ground_text():
+    return "example text"
 
-    # Call the ground function and check the result
-    result = ground("sample_text")
-    assert result == [("/img1.jpg", "caption1"), ("/img2.jpg", "caption2")]
+
+@pytest.fixture
+def visual_grounder(mocker):
+    return mocker.Mock()
+
+
+@pytest.fixture
+def blip2captioner(mocker):
+    return mocker.Mock()
+
+
+# Test success case
+def test_ground_success(mocker, ground_text, visual_grounder, blip2captioner):
+    mocker.patch(
+        "nerf_grounding_chat_interface.chat.grounder.call_visual_grounder",
+        return_value={"/path/to/image.jpg": "This is a caption."},
+    )
+
+    result = ground(ground_text, visual_grounder, blip2captioner)
+
+    assert result == [("/path/to/image.jpg", "This is a caption.")]
+
+
+# Test failure case (e.g., when call_visual_grounder raises an exception)
+def test_ground_failure(mocker, ground_text, visual_grounder, blip2captioner):
+    mocker.patch(
+        "nerf_grounding_chat_interface.chat.grounder.call_visual_grounder",
+        side_effect=Exception("Something went wrong."),
+    )
+
+    with pytest.raises(Exception, match="Something went wrong."):
+        ground(ground_text, visual_grounder, blip2captioner)

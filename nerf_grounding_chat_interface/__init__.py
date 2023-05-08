@@ -58,11 +58,11 @@ logging_dict_config = {
         },
     },
     "root": {
-        "level": "DEBUG",
+        "level": "INFO",
         "handlers": ["console", "logfile"],
     },
     "loggers": {
-        "urllib3": {"level": "INFO"},
+        "nerf_grounding_chat_interface": {"level": "DEBUG"},
     },
 }
 
