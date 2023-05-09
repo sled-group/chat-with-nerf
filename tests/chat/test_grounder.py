@@ -51,3 +51,10 @@ def test_ground_failure(mocker, ground_text, visual_grounder, blip2captioner):
 
     with pytest.raises(Exception, match="Something went wrong."):
         ground(ground_text, visual_grounder, blip2captioner)
+
+
+def test_taking_pictures(mocker, ground_text, visual_grounder):
+    mocker.patch(
+        "nerf_grounding_chat_interface.chat.grounder.call_visual_grounder",
+        side_effect=Exception("Something went wrong."),
+    )
