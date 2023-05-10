@@ -124,7 +124,7 @@ class ModelContextManager:
         return ModelContext(visual_grounder, blip2captioner, lerf_pipeline)
 
     @staticmethod
-    def rotate_x(angle_degrees, c2w):
+    def rotate_x(angle_degrees: int, c2w: np.ndarray) -> np.ndarray:
         angle_radians = np.radians(angle_degrees)
         rotation_matrix = np.array(
             [
@@ -137,7 +137,7 @@ class ModelContextManager:
         return c2w @ rotation_matrix
 
     @staticmethod
-    def rotate_y(angle_degrees, c2w):
+    def rotate_y(angle_degrees: int, c2w: np.ndarray) -> np.ndarray:
         angle_radians = np.radians(angle_degrees)
         rotation_matrix = np.array(
             [
@@ -150,7 +150,7 @@ class ModelContextManager:
         return c2w @ rotation_matrix
 
     @staticmethod
-    def rotate_z(angle_degrees, c2w):
+    def rotate_z(angle_degrees: int, c2w: np.ndarray) -> np.ndarray:
         angle_radians = np.radians(angle_degrees)
         rotation_matrix = np.array(
             [
