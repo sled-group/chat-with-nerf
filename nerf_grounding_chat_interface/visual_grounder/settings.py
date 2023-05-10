@@ -144,3 +144,4 @@ class Settings:
         ],
         "crop": None,
     }
+    data_path = "/workspace/inthewild/bigexample/Apr7at4-46PM-poly/keyframes/corrected_cameras"
