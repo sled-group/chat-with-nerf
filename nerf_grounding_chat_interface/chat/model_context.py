@@ -57,6 +57,7 @@ class ModelContextManager:
         print("Initialize LERF pipeline")
         _, lerf_pipeline, _, _ = eval_setup(
             Path(
+                # TODO: change this to a more general path
                 "/workspace/inthewild/outputs/bigexample/lerf/2023-04-22_022439/config.yml"
             ),
             eval_num_rays_per_chunk=None,
@@ -94,52 +95,26 @@ class ModelContextManager:
 
         for i in range(3):
             for j in range(4):
-                # print(prefix + str(i) + str(j))
-                # print(data[prefix + str(i) + str(j)])
                 camera_to_world_matrix[i][j] = data[prefix + str(i) + str(j)]
 
         camera_to_world_matrix[3][3] = 1
+        camera_to_world_matrix[0][3] = 0.3
+        camera_to_world_matrix[1][3] = 0.04
+        camera_to_world_matrix[2][3] = 0.15
 
-        camera_pose_preset = settings.camera_poses
-
-        angle_degrees = 60
-        angle_radians = np.radians(angle_degrees)
-        rotation_matrix_x = np.array(
-            [
-                [1, 0, 0, 0],
-                [0, np.cos(angle_radians), -np.sin(angle_radians), 0],
-                [0, np.sin(angle_radians), np.cos(angle_radians), 0],
-                [0, 0, 0, 1],
-            ]
-        )
-
-        rotation_matrix_y = np.array(
-            [
-                [np.cos(angle_radians), 0, np.sin(angle_radians), 0],
-                [0, 1, 0, 0],
-                [-np.sin(angle_radians), 0, np.cos(angle_radians), 0],
-                [0, 0, 0, 1],
-            ]
-        )
-
-        rotation_matrix_z = np.array(
-            [
-                [np.cos(angle_radians), -np.sin(angle_radians), 0, 0],
-                [np.sin(angle_radians), np.cos(angle_radians), 0, 0],
-                [0, 0, 1, 0],
-                [0, 0, 0, 1],
-            ]
-        )
-
-        c2w = camera_to_world_matrix
+        c2w = ModelContextManager.rotate_y(-60, camera_to_world_matrix)
+        c2w = ModelContextManager.rotate_z(-90, c2w)
         c2w_new = c2w.reshape(16, 1)
+
         settings.camera_poses["camera_path"][0]["camera_to_world"] = c2w_new.tolist()
         for i in range(1, len(settings.camera_poses["camera_path"])):
-            c2w = c2w @ rotation_matrix_z
-            c2w_new = c2w.reshape(16, 1)
+            c2w = ModelContextManager.rotate_y(60, c2w)
+            c2w_new = ModelContextManager.rotate_x(-20, c2w)
+            c2w_new = c2w_new.reshape(16, 1)
             settings.camera_poses["camera_path"][i][
                 "camera_to_world"
             ] = c2w_new.tolist()
+            settings.camera_poses["camera_path"][i]["fov"] = 90
 
         print("Initialize visualGrounder")
         visual_grounder = VisualGrounder(
@@ -147,3 +122,42 @@ class ModelContextManager:
         )
 
         return ModelContext(visual_grounder, blip2captioner, lerf_pipeline)
+
+    @staticmethod
+    def rotate_x(angle_degrees, c2w):
+        angle_radians = np.radians(angle_degrees)
+        rotation_matrix = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, np.cos(angle_radians), -np.sin(angle_radians), 0],
+                [0, np.sin(angle_radians), np.cos(angle_radians), 0],
+                [0, 0, 0, 1],
+            ]
+        )
+        return c2w @ rotation_matrix
+
+    @staticmethod
+    def rotate_y(angle_degrees, c2w):
+        angle_radians = np.radians(angle_degrees)
+        rotation_matrix = np.array(
+            [
+                [np.cos(angle_radians), 0, np.sin(angle_radians), 0],
+                [0, 1, 0, 0],
+                [-np.sin(angle_radians), 0, np.cos(angle_radians), 0],
+                [0, 0, 0, 1],
+            ]
+        )
+        return c2w @ rotation_matrix
+
+    @staticmethod
+    def rotate_z(angle_degrees, c2w):
+        angle_radians = np.radians(angle_degrees)
+        rotation_matrix = np.array(
+            [
+                [np.cos(angle_radians), -np.sin(angle_radians), 0, 0],
+                [np.sin(angle_radians), np.cos(angle_radians), 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ]
+        )
+        return c2w @ rotation_matrix

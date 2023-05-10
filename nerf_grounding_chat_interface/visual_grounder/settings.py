@@ -6,7 +6,7 @@ class Settings:
     threshold = 0.7
     camera_poses = {
         "camera_type": "perspective",
-        "render_height": 512,
+        "render_height": 748,
         "render_width": 512,
         "camera_path": [
             {
