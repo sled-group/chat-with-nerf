@@ -1,9 +1,9 @@
 from typing import Callable
 
-from nerf_grounding_chat_interface import logger
-from nerf_grounding_chat_interface.visual_grounder.blip2_caption import Blip2Captioner
-from nerf_grounding_chat_interface.visual_grounder.main import call_visual_grounder
-from nerf_grounding_chat_interface.visual_grounder.visual_grounder import VisualGrounder
+from chat_with_nerf import logger
+from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
+from chat_with_nerf.visual_grounder.main import call_visual_grounder
+from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def ground(

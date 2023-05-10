@@ -18,8 +18,8 @@ from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils import install_checks
 from rich.console import Console
 
-from nerf_grounding_chat_interface.visual_grounder.crop import CropData
-from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
+from chat_with_nerf.visual_grounder.crop import CropData
+from chat_with_nerf.visual_grounder.image_ref import ImageRef
 
 CONSOLE = Console(width=120)
 

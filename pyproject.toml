@@ -1,25 +1,47 @@
-[tool.poetry]
-name = "nerf-grounding-chat-interface"
-version = "0.1.0"
-description = ""
-authors = ["Jianing Yang <jianingy@umich.edu>"]
-readme = "README.md"
-packages = [{include = "nerf_grounding_chat_interface"}]
-
-[tool.poetry.dependencies]
-python = "^3.10"
-
-[tool.poetry.group.dev.dependencies]
-black = "^23.3.0"
-flake8 = "^6.0.0"
-isort = "^5.12.0"
-mypy = "^1.2.0"
-gitlint = "^0.19.1"
-pre-commit = "^3.3.1"
-pytest = "^7.3.1"
-pytest-mock = "^3.10.0"
-ipdb = "^0.13.13"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["chat_with_nerf"]
+
+[project]
+name = "chat_with_nerf"
+version = "0.1.0"
+description = "Chat with NeRF"
+readme = "README.md"
+requires-python = ">=3.10.0"
+license = { text="Apache 2.0"}
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+]
+
+dependencies = [
+    "numpy",
+    "attrs",
+    "gradio",
+    "torch",
+    "salesforce-lavis",
+    "Pillow",
+    "torchtyping",
+    "nerfstudio",
+    "lerf",
+]
+
+[project.optional-dependencies]
+
+dev = [
+   "black>=23.3.0",
+   "flake8>=6.0.0",
+   "isort>=5.12.0",
+   "mypy>=1.2.0",
+   "gitlint>=0.19.1",
+   "pre-commit>=3.3.1",
+   "pytest>=7.3.1",
+   "pytest-mock>=3.10.0",
+   "ipdb>=0.13.13"
+]

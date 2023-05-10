@@ -1,12 +1,13 @@
 class Settings:
-    load_config = (
-        "/workspace/inthewild/outputs/bigexample/lerf/2023-04-22_022439/config.yml"
+    load_lerf_config: str = (
+        "/workspace/chat-with-nerf/data/inthewild/outputs/"
+        "bigexample/lerf/2023-04-22_022439/config.yml"
     )
-    output_path = "/workspace/nerf-grounding-chat-interface/grounder_images/results"
-    threshold = 0.7
-    camera_poses = {
+    output_path: str = "/workspace/chat-with-nerf/grounder_output/results"
+    threshold: float = 0.7
+    camera_poses: dict = {
         "camera_type": "perspective",
-        "render_height": 512,
+        "render_height": 748,
         "render_width": 512,
         "camera_path": [
             {
@@ -144,3 +145,7 @@ class Settings:
         ],
         "crop": None,
     }
+    data_path: str = (
+        "/workspace/chat-with-nerf/data/inthewild/bigexample/Apr7at4-46PM-poly"
+        "/keyframes/corrected_cameras"
+    )

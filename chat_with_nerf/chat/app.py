@@ -2,8 +2,8 @@
 
 import gradio as gr
 
-from nerf_grounding_chat_interface.chat import agent
-from nerf_grounding_chat_interface.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
+from chat_with_nerf.chat import agent
+from chat_with_nerf.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
 
 
 # Resetting to blank
@@ -69,7 +69,7 @@ with gr.Blocks(
         with gr.Row():
             with gr.Column(scale=5):
                 model_3d = gr.Model3D(
-                    value="/workspace/nerf-grounding-chat-interface/3d_asset/poly.glb",
+                    value="/workspace/chat-with-nerf/3d_asset/poly.glb",
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="3D Model",
                 )
