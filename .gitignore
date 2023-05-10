@@ -3,5 +3,8 @@
 __pycache__
 .mypy_cache
 chat2ground.log*
-grounder_images/
+grounder_output/
 dev.ipynb
+data/
+build/
+*.egg-info

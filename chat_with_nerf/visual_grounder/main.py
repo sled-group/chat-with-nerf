@@ -1,9 +1,9 @@
 import numpy as np
 
-from nerf_grounding_chat_interface.visual_grounder.blip2_caption import Blip2Captioner
-from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
-from nerf_grounding_chat_interface.visual_grounder.settings import Settings
-from nerf_grounding_chat_interface.visual_grounder.visual_grounder import VisualGrounder
+from chat_with_nerf.settings import Settings
+from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
+from chat_with_nerf.visual_grounder.image_ref import ImageRef
+from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def call_visual_grounder(

@@ -6,8 +6,8 @@ import time
 import requests
 from gradio import Chatbot
 
-from nerf_grounding_chat_interface.chat.grounder import ground_with_callback
-from nerf_grounding_chat_interface.model.model_context import ModelContextManager
+from chat_with_nerf.chat.grounder import ground_with_callback
+from chat_with_nerf.model.model_context import ModelContextManager
 
 model_context = ModelContextManager.get_model_context()
 

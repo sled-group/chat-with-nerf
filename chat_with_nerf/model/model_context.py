@@ -1,20 +1,20 @@
+import json
 import os
 import sys
 from pathlib import Path
 from typing import Optional
-import json
-import numpy as np
 
+import numpy as np
 import torch
 from attrs import define
 from lavis.models import load_model_and_preprocess  # type: ignore
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils.eval_utils import eval_setup
 
-from nerf_grounding_chat_interface.visual_grounder.blip2_caption import Blip2Captioner
-from nerf_grounding_chat_interface.visual_grounder.settings import Settings
-from nerf_grounding_chat_interface.visual_grounder.visual_grounder import VisualGrounder
-from nerf_grounding_chat_interface.model.util import rotate_x, rotate_y, rotate_z
+from chat_with_nerf.model.util import rotate_x, rotate_y, rotate_z
+from chat_with_nerf.settings import Settings  # type: ignore
+from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
+from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 @define
@@ -43,14 +43,14 @@ class ModelContextManager:
 
         settings = Settings()
 
-        print("load_config: ", settings.load_config)
+        print("load lerf config: ", settings.load_lerf_config)
 
         print("Initialize Blip2Captioner")
         blip2captioner = ModelContextManager.initiaze_blip_captioner()
 
         print("Initialize LERF pipeline")
         lerf_pipeline = ModelContextManager.initialize_lerf_pipeline(
-            settings.load_config
+            settings.load_lerf_config
         )
         settings = ModelContextManager.edit_settings(settings)
 
@@ -99,7 +99,7 @@ class ModelContextManager:
             file_path = settings.data_path + "/" + first_file
 
         # Replace 'file_path.json' with the actual path to your JSON file
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             data = json.load(file)
 
         camera_to_world_matrix = np.zeros((4, 4))

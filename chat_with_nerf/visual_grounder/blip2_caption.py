@@ -2,7 +2,7 @@ import torch
 from attrs import Factory, define
 from PIL import Image
 
-from nerf_grounding_chat_interface.visual_grounder.image_ref import ImageRef
+from chat_with_nerf.visual_grounder.image_ref import ImageRef
 
 
 @define

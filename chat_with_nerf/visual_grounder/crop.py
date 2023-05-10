@@ -1,12 +1,11 @@
 #!/usr/bin/env python
-"""
-Groundng Render.py
-"""
+"""Groundng Render.py."""
 from __future__ import annotations
 
-from attrs import define
-from typing import Any, Dict, Optional
+from typing import Any
+
 import torch
+from attrs import define
 from torchtyping import TensorType  # type: ignore
 
 
@@ -15,15 +14,15 @@ class CropData:
     """Data for cropping an image."""
 
     background_color: TensorType[3] = torch.Tensor([0.0, 0.0, 0.0])
-    """background color"""
+    """Background color."""
     center: TensorType[3] = torch.Tensor([0.0, 0.0, 0.0])
-    """center of the crop"""
+    """Center of the crop."""
     scale: TensorType[3] = torch.Tensor([2.0, 2.0, 2.0])
-    """scale of the crop"""
+    """Scale of the crop."""
 
 
-def get_crop_from_json(camera_json: Dict[str, Any]) -> Optional[CropData]:
-    """Load crop data from a camera path JSON
+def get_crop_from_json(camera_json: dict[str, Any]) -> CropData | None:
+    """Load crop data from a camera path JSON.
 
     args:
         camera_json: camera path data
