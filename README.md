@@ -9,9 +9,9 @@
 
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
-## :label: TODO 
+## :label: TODO
 
-## :hammer_and_wrench: Install 
+## :hammer_and_wrench: Install
 
 To install the dependencies we provide a Dockerfile:
 ```bash

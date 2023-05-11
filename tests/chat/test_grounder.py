@@ -1,4 +1,5 @@
 import pytest
+
 from chat_with_nerf.chat.grounder import ground
 from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
