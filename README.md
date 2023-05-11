@@ -24,10 +24,11 @@ git clone https://github.com/sled-group/chat-with-nerf.git
 ```
 Run the Docker using the following fashion, especially mount chat-with-nerf under workspace
 ```bash
-docker run --gpus "device=0" -v /{PATH}/chat2ground/:/workspace/ -v /{PATH}/.cache/:/home/user/.cache/ --rm -it --shm-size=12gb chat2ground:v5
+docker run --gpus "device=0" -v /<parent_path_chat-with-nerf>/:/workspace/ -v /home/<your_username>/.cache/:/home/user/.cache/ --rm -it --shm-size=12gb chat-with-nerf:latest
 ```
 Then install Chat with NeRF dependencies
 ```bash
+cd /workspace/chat-with-nerf
 pip install -e .
 pip install -e .[dev]
 ```

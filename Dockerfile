@@ -3,7 +3,7 @@ FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 
 # metainformation
 LABEL org.opencontainers.image.version = "0.1.0"
-LABEL org.opencontainers.image.source = "https://github.com/sled-group/chat-with-nerf.git"
+LABEL org.opencontainers.image.source = "https://github.com/sled-group/chat-with-nerf"
 LABEL org.opencontainers.image.licenses = "Apache License 2.0"
 LABEL org.opencontainers.image.base.name="docker.io/library/nvidia/cuda:11.8.0-devel-ubuntu22.04"
 
