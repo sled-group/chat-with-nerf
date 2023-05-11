@@ -29,6 +29,7 @@ docker run --gpus "device=0" -v /{PATH}/chat2ground/:/workspace/ -v /{PATH}/.cac
 Then install Chat with NeRF dependencies
 ```bash
 pip install -e .
+pip install -e .[dev]
 ```
 (or use your favorite virtual environment manager)
 
