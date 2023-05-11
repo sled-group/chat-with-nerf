@@ -1,4 +1,4 @@
-from nerf_grounding_chat_interface import logger
+from chat_with_nerf import logger
 
 
 def test_logger():

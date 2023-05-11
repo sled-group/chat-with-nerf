@@ -2,8 +2,8 @@
 FROM nvidia/cuda:11.8.0-devel-ubuntu22.04
 
 # metainformation
-LABEL org.opencontainers.image.version = "0.1.18"
-LABEL org.opencontainers.image.source = "https://github.com/nerfstudio-project/nerfstudio"
+LABEL org.opencontainers.image.version = "0.1.0"
+LABEL org.opencontainers.image.source = "https://github.com/sled-group/chat-with-nerf.git"
 LABEL org.opencontainers.image.licenses = "Apache License 2.0"
 LABEL org.opencontainers.image.base.name="docker.io/library/nvidia/cuda:11.8.0-devel-ubuntu22.04"
 
@@ -147,18 +147,32 @@ RUN git clone --branch main --recursive https://github.com/cvg/pixel-perfect-sfm
 
 RUN python3.10 -m pip install omegaconf
 # Copy nerfstudio folder and give ownership to user.
-ADD . /home/user/nerfstudio
-USER root
-RUN chown -R user /home/user/nerfstudio
-USER 1000
+# ADD . /home/user/nerfstudio
+# USER root
+# RUN chown -R user /home/user/nerfstudio
+# USER 1000
 
 # Install nerfstudio dependencies.
-RUN cd nerfstudio && \
+RUN git clone https://github.com/nerfstudio-project/nerfstudio.git && \
+    cd nerfstudio && \
+    pip install --upgrade pip setuptools && \
+    pip install -e . && \
+    cd ..
+
+# Install lerf dependencies.
+RUN git clone https://github.com/kerrj/lerf.git && \
+    cd lerf && \
     python3.10 -m pip install -e . && \
     cd ..
 
 # Change working directory
 WORKDIR /workspace
+
+# For production
+# RUN git clone https://github.com/sled-group/chat-with-nerf.git && \
+#     cd chat-with-nerf && \
+#     python3.10 -m pip install -e . && \
+#     cd ..
 
 # Install nerfstudio cli auto completion and enter shell if no command was provided.
 CMD ns-install-cli --mode install && /bin/bash
