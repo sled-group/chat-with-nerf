@@ -30,6 +30,7 @@ dependencies = [
     "torchtyping",
     "nerfstudio",
     "lerf",
+    "types-requests"
 ]
 
 [project.optional-dependencies]
@@ -43,5 +44,5 @@ dev = [
    "pre-commit>=3.3.1",
    "pytest>=7.3.1",
    "pytest-mock>=3.10.0",
-   "ipdb>=0.13.13"
+   "ipdb>=0.13.13",
 ]

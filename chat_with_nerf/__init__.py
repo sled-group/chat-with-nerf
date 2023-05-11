@@ -62,7 +62,7 @@ logging_dict_config = {
         "handlers": ["console", "logfile"],
     },
     "loggers": {
-        "nerf_grounding_chat_interface": {"level": "DEBUG"},
+        "chat-with-nerf": {"level": "DEBUG"},
     },
 }
 
