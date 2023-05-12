@@ -1,16 +1,6 @@
 import pytest
-from nerf_grounding_chat_interface.chat.grounder import ground
-from nerf_grounding_chat_interface.visual_grounder.blip2_caption import Blip2Captioner
-from nerf_grounding_chat_interface.visual_grounder.visual_grounder import VisualGrounder
 
-
-# Mock the necessary classes and functions for the test cases
-class MockVisualGrounder(VisualGrounder):
-    pass
-
-
-class MockBlip2Captioner(Blip2Captioner):
-    pass
+from chat_with_nerf.chat.grounder import ground
 
 
 # Pytest fixtures for the ground method arguments
@@ -32,7 +22,7 @@ def blip2captioner(mocker):
 # Test success case
 def test_ground_success(mocker, ground_text, visual_grounder, blip2captioner):
     mocker.patch(
-        "nerf_grounding_chat_interface.chat.grounder.call_visual_grounder",
+        "chat_with_nerf.chat.grounder.call_visual_grounder",
         return_value={"/path/to/image.jpg": "This is a caption."},
     )
 
@@ -44,7 +34,7 @@ def test_ground_success(mocker, ground_text, visual_grounder, blip2captioner):
 # Test failure case (e.g., when call_visual_grounder raises an exception)
 def test_ground_failure(mocker, ground_text, visual_grounder, blip2captioner):
     mocker.patch(
-        "nerf_grounding_chat_interface.chat.grounder.call_visual_grounder",
+        "chat_with_nerf.chat.grounder.call_visual_grounder",
         side_effect=Exception("Something went wrong."),
     )
 

@@ -149,3 +149,5 @@ class Settings:
         "/workspace/chat-with-nerf/data/inthewild/bigexample/Apr7at4-46PM-poly"
         "/keyframes/corrected_cameras"
     )
+    USE_FAKE_GROUNDER: bool = False
+    active_scene: str = "office"
