@@ -150,4 +150,3 @@ class Settings:
         "/keyframes/corrected_cameras"
     )
     USE_FAKE_GROUNDER: bool = False
-    active_scene: str = "office"
