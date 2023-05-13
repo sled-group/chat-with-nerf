@@ -78,10 +78,12 @@ class ModelContextManager:
         ]
 
         for subdirectory in subdirectories:
-            scene_path = (Path(path) / subdirectory /subdirectory).with_suffix(".yaml")
+            scene_path = (Path(path) / subdirectory / subdirectory).with_suffix(".yaml")
             with open(scene_path) as f:
                 data = yaml.safe_load(f)
-            scene = Scene(data['load_lerf_config'], data['camera_path'], data['camera_poses'])
+            scene = Scene(
+                data["load_lerf_config"], data["camera_path"], data["camera_poses"]
+            )
             scenes[subdirectory] = scene
         return scenes
 
