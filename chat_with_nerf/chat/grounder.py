@@ -1,6 +1,7 @@
 from typing import Callable
 
 from chat_with_nerf import logger
+from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
 from chat_with_nerf.visual_grounder.main import call_visual_grounder
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
@@ -21,6 +22,18 @@ def ground(
     :param blip2captioner: a blip2captioner model
     :type blip2captioner: Blip2Captioner
     """
+
+    if Settings.USE_FAKE_GROUNDER:
+        return [
+            (
+                "/workspace/chat-with-nerf/grounder_output/rgb/000.png",
+                "a long sofa with white cover and yellow accent, metallic legs",
+            ),
+            (
+                "/workspace/chat-with-nerf/grounder_output/rgb/001.png",
+                "a loveseat with a pillow on top, white cover and yellow accent, metallic legs",
+            ),
+        ]
 
     logger.info(f"Ground Text: {ground_text}")
 

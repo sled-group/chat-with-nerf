@@ -1,17 +1,6 @@
 import pytest
 
 from chat_with_nerf.chat.grounder import ground
-from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
-from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
-
-
-# Mock the necessary classes and functions for the test cases
-class MockVisualGrounder(VisualGrounder):
-    pass
-
-
-class MockBlip2Captioner(Blip2Captioner):
-    pass
 
 
 # Pytest fixtures for the ground method arguments

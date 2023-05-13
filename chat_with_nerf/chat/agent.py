@@ -2,14 +2,20 @@ import json
 import os
 import threading
 import time
+from collections.abc import Generator
 
 import requests
-from gradio import Chatbot
+from requests import Response
 
+from chat_with_nerf import logger
 from chat_with_nerf.chat.grounder import ground_with_callback
-from chat_with_nerf.model.model_context import ModelContextManager
+from chat_with_nerf.model.model_context import ModelContext, ModelContextManager
+from chat_with_nerf.settings import Settings
 
-model_context = ModelContextManager.get_model_context()
+if not Settings.USE_FAKE_GROUNDER:
+    model_context: ModelContext = ModelContextManager.get_model_context()
+else:
+    model_context = ModelContext(None, None, None)  # type: ignore
 
 # Streaming endpoint
 API_URL = str(os.getenv("API_URL"))
@@ -26,12 +32,18 @@ MAX_ITERATION = 10
 def act(
     system_msg: str,
     inputs: str,
-    top_p,
-    temperature,
-    chat_counter,
-    gpt_chat_state=[],
-    chatbot_for_display: Chatbot = [],
-):
+    top_p: float,
+    temperature: float,
+    chat_counter: int,
+    gpt_chat_state: list[tuple],
+    chatbot_for_display: list[tuple],
+    dropdown_scene: str,
+) -> Generator[tuple[list[tuple], list[tuple], int, Response | None], None, None,]:
+    chatbot_for_display.append(
+        (inputs, "")
+    )  # append in a tuple format, first is user input, second is assistant response
+    yield chatbot_for_display, gpt_chat_state, chat_counter, None
+
     give_control_to_user = False
     for _ in range(MAX_ITERATION):  # iterate until GPT decides to give control to user
         if give_control_to_user:
@@ -50,13 +62,16 @@ def act(
 
         # done streaming
         try:
-            gpt_response_json = json.loads(chatbot_for_display[-1][1])
+            gpt_response_json = json.loads(gpt_chat_state[-1][1])
         except json.decoder.JSONDecodeError:
             inputs = "SYSTEM: The above response caused an error: json.decoder.JSONDecodeError"
             continue
 
         beautified_response_markdown = beautify_gpt_response(gpt_response_json)
-        chatbot_for_display.append((None, beautified_response_markdown))
+        chatbot_for_display[-1] = (
+            chatbot_for_display[-1][0],
+            beautified_response_markdown,
+        )
         yield chatbot_for_display, gpt_chat_state, chat_counter, response
 
         # controller logic to decide what to do next
@@ -134,18 +149,19 @@ def display_grounder_results(
             (None, (img_path, caption)),
         ]
         pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
+    logger.info(f"pure_text_for_gpt: {pure_text_for_gpt}")
     return chatbot_msg_for_user, pure_text_for_gpt
 
 
 def ask_gpt(
-    system_msg,
-    inputs,
-    top_p,
-    temperature,
-    chat_counter,
-    gpt_chat_state=[],
-    chatbot_for_display: Chatbot = [],
-):
+    system_msg: str,
+    inputs: str,
+    top_p: float,
+    temperature: float,
+    chat_counter: int,
+    gpt_chat_state: list[tuple],
+    chatbot_for_display: list[tuple],
+) -> Generator[tuple[list[tuple], list[tuple], int, Response], None, None,]:
     headers = {
         "Content-Type": "application/json",
         "api-key": OPENAI_API_KEY,
@@ -210,9 +226,11 @@ def ask_gpt(
     gpt_chat_state.append(
         (inputs, "")
     )  # append in a tuple format, first is user input, second is assistant response
-    chatbot_for_display.append(
-        (inputs, "")
-    )  # append in a tuple format, first is user input, second is assistant response
+    if chatbot_for_display[-1][0] is None:
+        # if the last turn doesn't have a user input (this is after grounder returns),
+        # then give a new empty turn to chatbot_for_display to work with
+        # otherwise, it would delete the last turn
+        chatbot_for_display.append((None, None))
     print(f"Logging : payload is - {payload}")
     # make a POST request to the API endpoint using the requests.post method, passing in stream=True
     response = requests.post(API_URL, headers=headers, json=payload, stream=True)
@@ -239,16 +257,16 @@ def ask_gpt(
                     + json.loads(chunk[6:])["choices"][0]["delta"]["content"]
                 )
 
-                gpt_chat_state[-1] = (gpt_chat_state[-1][0], " " + partial_words)
+                gpt_chat_state[-1] = (gpt_chat_state[-1][0], partial_words)
                 chatbot_for_display[-1] = (
                     chatbot_for_display[-1][0],
-                    " " + partial_words,
+                    partial_words,
                 )
 
                 token_counter += 1
                 yield chatbot_for_display, gpt_chat_state, chat_counter, response
 
-    return chatbot_for_display, gpt_chat_state, chat_counter, response
+    yield chatbot_for_display, gpt_chat_state, chat_counter, response
 
 
 def beautify_gpt_response(gpt_response_json) -> str:
