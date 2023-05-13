@@ -21,6 +21,7 @@ classifiers = [
 ]
 
 dependencies = [
+    "pyyaml",
     "numpy",
     "attrs",
     "gradio",

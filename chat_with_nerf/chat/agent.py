@@ -12,7 +12,8 @@ from chat_with_nerf.chat.grounder import ground_with_callback
 from chat_with_nerf.model.model_context import ModelContext, ModelContextManager
 from chat_with_nerf.settings import Settings
 
-if not Settings.USE_FAKE_GROUNDER:
+settings = Settings()
+if not settings.USE_FAKE_GROUNDER:
     model_context: ModelContext = ModelContextManager.get_model_context()
 else:
     model_context = ModelContext(None, None, None)  # type: ignore
@@ -102,7 +103,7 @@ def act(
                 target=ground_with_callback,
                 args=(
                     ground_text,
-                    model_context.visualGrounder,
+                    model_context.visual_grounder,
                     model_context.blip2captioner,
                     grounding_callback,
                 ),
