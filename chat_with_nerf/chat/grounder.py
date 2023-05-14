@@ -23,9 +23,8 @@ def ground(
     :type blip2captioner: Blip2Captioner
     """
 
-    print("FAKE: ", Settings.USE_FAKE_GROUNDER)
-    settings = Settings()
-    if settings.USE_FAKE_GROUNDER:
+    if Settings.USE_FAKE_GROUNDER:
+        print("FAKE: ", Settings.USE_FAKE_GROUNDER)
         return [
             (
                 "/workspace/chat-with-nerf/grounder_output/rgb/000.png",

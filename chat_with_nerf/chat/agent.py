@@ -12,8 +12,7 @@ from chat_with_nerf.chat.grounder import ground_with_callback
 from chat_with_nerf.model.model_context import ModelContext, ModelContextManager
 from chat_with_nerf.settings import Settings
 
-settings = Settings()
-if not settings.USE_FAKE_GROUNDER:
+if not Settings.USE_FAKE_GROUNDER:
     model_context: ModelContext = ModelContextManager.get_model_context()
 else:
     model_context = ModelContext(None, None, None)  # type: ignore

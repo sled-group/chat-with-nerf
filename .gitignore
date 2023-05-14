@@ -5,12 +5,7 @@ __pycache__
 chat2ground.log*
 grounder_output/
 dev.ipynb
-data/home_1/home_1
-data/home_1/outputs
-data/home_2/home_2
-data/home_2/outputs
-data/office/office
-data/office/outputs
+data/
 build/
 *.egg-info
 *.zip

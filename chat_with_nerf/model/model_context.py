@@ -10,7 +10,7 @@ from lavis.models import load_model_and_preprocess  # type: ignore
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils.eval_utils import eval_setup
 
-from chat_with_nerf.model.scene import Scene
+from chat_with_nerf.model.scene_config import SceneConfig
 from chat_with_nerf.settings import Settings  # type: ignore
 from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
@@ -19,7 +19,7 @@ from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 @define
 class ModelContext:
     visual_grounder: dict[str, VisualGrounder]
-    scene_configs: dict[str, Scene]
+    scene_configs: dict[str, SceneConfig]
     blip2captioner: Blip2Captioner
     pipeline: dict[str, Pipeline]
 
@@ -53,15 +53,15 @@ class ModelContextManager:
         pipeline = {}
         visual_grounder_ins = {}
         initial_dir = os.getcwd()
-        for scene_name, scene in scene_configs.items():
+        for scene_name, scene_config in scene_configs.items():
             # LERF's implementation requires to find output directory
             os.chdir(settings.data_path + "/" + scene_name)
             lerf_pipeline = ModelContextManager.initialize_lerf_pipeline(
-                scene.load_lerf_config
+                scene_config.load_lerf_config
             )
             pipeline[scene_name] = lerf_pipeline
             visual_grounder_ins[scene_name] = VisualGrounder(
-                settings.output_path, scene.camera_poses, lerf_pipeline
+                settings.output_path, scene_config.camera_poses, lerf_pipeline
             )
 
         # move back the current directory
@@ -71,7 +71,7 @@ class ModelContextManager:
         )
 
     @staticmethod
-    def search_scenes(path: str) -> dict[str, Scene]:
+    def search_scenes(path: str) -> dict[str, SceneConfig]:
         scenes = {}
         subdirectories = [
             name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))
@@ -81,20 +81,11 @@ class ModelContextManager:
             scene_path = (Path(path) / subdirectory / subdirectory).with_suffix(".yaml")
             with open(scene_path) as f:
                 data = yaml.safe_load(f)
-            scene = Scene(
+            scene = SceneConfig(
                 data["load_lerf_config"], data["camera_path"], data["camera_poses"]
             )
             scenes[subdirectory] = scene
         return scenes
-
-    @staticmethod
-    def get_current_scene_config(
-        scene_name: str, scene_configs: dict[str, Scene]
-    ) -> tuple[str, str]:
-        return (
-            scene_configs[scene_name].camera_path,
-            scene_configs[scene_name].load_lerf_config,
-        )
 
     @staticmethod
     def initiaze_blip_captioner() -> Blip2Captioner:
