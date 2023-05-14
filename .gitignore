@@ -8,3 +8,4 @@ dev.ipynb
 data/
 build/
 *.egg-info
+*.zip

@@ -24,6 +24,7 @@ def ground(
     """
 
     if Settings.USE_FAKE_GROUNDER:
+        print("FAKE: ", Settings.USE_FAKE_GROUNDER)
         return [
             (
                 "/workspace/chat-with-nerf/grounder_output/rgb/000.png",

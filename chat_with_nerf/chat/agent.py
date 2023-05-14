@@ -102,7 +102,7 @@ def act(
                 target=ground_with_callback,
                 args=(
                     ground_text,
-                    model_context.visualGrounder,
+                    model_context.visual_grounder,
                     model_context.blip2captioner,
                     grounding_callback,
                 ),
