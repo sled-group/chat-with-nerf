@@ -34,8 +34,9 @@ pip install -e .[dev]
 ```
 (or use your favorite virtual environment manager)
 
-To run our pipeline, you need to do:
+To run the demo:
 
 ```
-export $(cat .env | xargs); gradio app.py
+cd /workspace/chat-with-nerf
+export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ```

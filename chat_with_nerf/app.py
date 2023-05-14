@@ -1,5 +1,6 @@
 # Adapted from https://huggingface.co/spaces/ysharma/ChatGPT4
 
+import os
 from signal import SIGTERM
 from time import sleep
 
@@ -8,6 +9,10 @@ from psutil import process_iter
 
 from chat_with_nerf.chat import agent
 from chat_with_nerf.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
+from chat_with_nerf.settings import Settings
+from chat_with_nerf.util import list_dirs
+
+INITIAL_MSG = "Hello there! What can I help you find in this room?"
 
 
 # Resetting to blank
@@ -29,10 +34,15 @@ def set_interactive_false():
     return gr.update(interactive=False)
 
 
-def change_scene(dropdown_scene: str):
-    # TODO: Change the settings
-
-    return f"/workspace/chat-with-nerf/3d_asset/{dropdown_scene}.glb"
+def change_scene(dropdown_scene: str) -> tuple[str, list, list, int, str | None]:
+    # reset model_3d, chatbot_for_display, gpt_chat_state, chat_counter, server_status_code
+    return (
+        os.path.join(Settings.data_path, dropdown_scene, "poly.glb"),
+        [(None, INITIAL_MSG)],
+        [],
+        0,
+        None,
+    )
 
 
 title = """<h1 align="center">🔥Chat with NeRF using GPT-4🚀</h1>"""
@@ -67,21 +77,19 @@ with gr.Blocks() as demo:
                     type="password",
                 )
                 dropdown_scene = gr.Dropdown(
-                    choices=["office", "home_1"],
+                    choices=list_dirs(Settings.data_path),
                     value="office",
                     interactive=True,
                     label="Select a scene",
                 )
                 model_3d = gr.Model3D(
-                    value="/workspace/chat-with-nerf/3d_asset/office.glb",
+                    value=Settings.data_path + "/office" + "/poly.glb",
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="3D Model",
                 )
             with gr.Column(scale=5):
                 chatbot_for_display = gr.Chatbot(
-                    value=[
-                        (None, "Hello there! What can I help you find in this room?")
-                    ],
+                    value=[(None, INITIAL_MSG)],
                     label="Chat Assistant",
                 ).style(height="600")
                 with gr.Row():
@@ -108,7 +116,7 @@ with gr.Blocks() as demo:
                 ],
                 inputs=user_chat_input,
             )
-        with gr.Accordion(label="System message:", open=False):
+        with gr.Accordion(label="System instruction:", open=False):
             system_msg = gr.Textbox(
                 label="Instruct the AI Assistant to set its beaviour",
                 info=system_msg_info,
@@ -139,7 +147,17 @@ with gr.Blocks() as demo:
             chat_counter = gr.Number(value=0, visible=False, precision=0)
 
     # Event handling
-    dropdown_scene.change(fn=change_scene, inputs=[dropdown_scene], outputs=[model_3d])
+    dropdown_scene.change(
+        fn=change_scene,
+        inputs=[dropdown_scene],
+        outputs=[
+            model_3d,
+            chatbot_for_display,
+            gpt_chat_state,
+            chat_counter,
+            server_status_code,
+        ],
+    )
     user_chat_input.submit(
         fn=agent.act,
         inputs=[
