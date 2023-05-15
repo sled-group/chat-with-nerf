@@ -10,6 +10,7 @@ from requests import Response
 
 from chat_with_nerf import logger
 from chat_with_nerf.chat.grounder import ground_with_callback
+from chat_with_nerf.chat.session import Session
 from chat_with_nerf.model.model_context import ModelContext, ModelContextManager
 from chat_with_nerf.settings import Settings
 
@@ -40,50 +41,61 @@ def act(
     inputs: str,
     top_p: float,
     temperature: float,
-    chat_counter: int,
-    gpt_chat_state: list[tuple],
-    chatbot_for_display: list[tuple],
     dropdown_scene: str,
-) -> Generator[tuple[list[tuple], list[tuple], int, Response | None], None, None,]:
-    chatbot_for_display.append(
+    session: Session,
+) -> Generator[tuple[list[tuple], int, Response | None, Session], None, None,]:
+    session.chat_history_for_display.append(
         (inputs, "")
     )  # append in a tuple format, first is user input, second is assistant response
-    yield chatbot_for_display, gpt_chat_state, chat_counter, None
+    yield (
+        session.chat_history_for_display,
+        session.chat_counter,
+        None,
+        session,
+    )
 
     give_control_to_user = False
     for _ in range(MAX_ITERATION):  # iterate until GPT decides to give control to user
         if give_control_to_user:
             break
 
-        for chatbot_for_display, gpt_chat_state, chat_counter, response in ask_gpt(
+        for session, response in ask_gpt(
             system_msg,
             inputs,
             top_p,
             temperature,
-            chat_counter,
-            gpt_chat_state,
-            chatbot_for_display,
+            session,
         ):
-            yield chatbot_for_display, gpt_chat_state, chat_counter, response
+            yield (
+                session.chat_history_for_display,
+                session.chat_counter,
+                response,
+                session,
+            )
 
         # done streaming
         try:
-            gpt_response_json = json.loads(gpt_chat_state[-1][1])
+            gpt_response_json = json.loads(session.chat_history_for_llm[-1][1])
         except json.decoder.JSONDecodeError:
             inputs = "SYSTEM: The above response caused an error: json.decoder.JSONDecodeError"
             continue
 
         beautified_response_markdown = beautify_gpt_response(gpt_response_json)
-        chatbot_for_display[-1] = (
-            chatbot_for_display[-1][0],
+        session.chat_history_for_display[-1] = (
+            session.chat_history_for_display[-1][0],
             beautified_response_markdown,
         )
-        yield chatbot_for_display, gpt_chat_state, chat_counter, response
+        yield (
+            session.chat_history_for_display,
+            session.chat_counter,
+            response,
+            session,
+        )
 
         # controller logic to decide what to do next
         if gpt_response_json["command"]["name"] == "user_dialog":
             sentence_to_user = gpt_response_json["command"]["args"]["sentence_to_user"]
-            chatbot_for_display.append(
+            session.chat_history_for_display.append(
                 (None, sentence_to_user)
             )  # use none as user input to display system message only
             give_control_to_user = True
@@ -121,26 +133,50 @@ def act(
                 dot_counter = (dot_counter + 1) % 4
                 dots = "." * dot_counter
                 if first_iteration:
-                    chatbot_for_display.append((None, f"SYSTEM: I'm thinking{dots}"))
+                    session.chat_history_for_display.append(
+                        (None, f"SYSTEM: I'm thinking{dots}")
+                    )
                     first_iteration = False
                 else:
-                    chatbot_for_display[-1] = (None, f"SYSTEM: I'm thinking{dots}")
-                yield chatbot_for_display, gpt_chat_state, chat_counter, response
+                    session.chat_history_for_display[-1] = (
+                        None,
+                        f"SYSTEM: I'm thinking{dots}",
+                    )
+                yield (
+                    session.chat_history_for_display,
+                    session.chat_counter,
+                    response,
+                    session,
+                )
                 time.sleep(0.5)  # Adjust the sleep duration as needed
 
-            chatbot_for_display.extend(grounder_returned_chatbot_msg)
+            session.chat_history_for_display.extend(grounder_returned_chatbot_msg)
 
         elif gpt_response_json["command"]["name"] == "finish_grounding":
             image_id = gpt_response_json["command"]["args"]["image_id"]
-            chatbot_for_display.append(
+            session.chat_history_for_display.append(
                 (None, f"SYSTEM: Grounding finished. Image id: {image_id}")
             )
             give_control_to_user = True
         elif gpt_response_json["command"]["name"] == "end_dialog":
-            chatbot_for_display.append((None, "SYSTEM: End of dialog"))
+            session.chat_history_for_display.append((None, "SYSTEM: End of dialog"))
             give_control_to_user = True
 
-        yield chatbot_for_display, gpt_chat_state, chat_counter, response
+        yield (
+            session.chat_history_for_display,
+            session.chat_counter,
+            response,
+            session,
+        )
+
+    # update and save session state
+    session.save()
+    yield (
+        session.chat_history_for_display,
+        session.chat_counter,
+        response,
+        session,
+    )
 
 
 def display_grounder_results(
@@ -164,10 +200,8 @@ def ask_gpt(
     inputs: str,
     top_p: float,
     temperature: float,
-    chat_counter: int,
-    gpt_chat_state: list[tuple],
-    chatbot_for_display: list[tuple],
-) -> Generator[tuple[list[tuple], list[tuple], int, Response], None, None,]:
+    session: Session,
+) -> Generator[tuple[Session, Response], None, None]:
     headers = {
         "Content-Type": "application/json",
         "api-key": OPENAI_API_KEY,
@@ -187,7 +221,7 @@ def ask_gpt(
             {"role": "system", "content": system_msg},
         ]
 
-    if chat_counter == 0:
+    if session.chat_counter == 0:
         payload = {
             "model": "gpt-4",
             "messages": initial_message,
@@ -200,7 +234,7 @@ def ask_gpt(
         }
     else:  # if chat_counter != 0 :
         messages = multi_turn_message  # Of the type: [{"role": "system", "content": system_msg},]
-        for data in gpt_chat_state:
+        for data in session.chat_history_for_llm:
             user = {}
             user["role"] = "user"
             user["content"] = data[0]
@@ -225,16 +259,16 @@ def ask_gpt(
             "frequency_penalty": 0,
         }
 
-    chat_counter += 1
+    session.chat_counter += 1
 
-    gpt_chat_state.append(
+    session.chat_history_for_llm.append(
         (inputs, "")
     )  # append in a tuple format, first is user input, second is assistant response
-    if chatbot_for_display[-1][0] is None:
+    if session.chat_history_for_display[-1][0] is None:
         # if the last turn doesn't have a user input (this is after grounder returns),
-        # then give a new empty turn to chatbot_for_display to work with
+        # then give a new empty turn to session.chat_history_for_display to work with
         # otherwise, it would delete the last turn
-        chatbot_for_display.append((None, None))
+        session.chat_history_for_display.append((None, None))
     logger.info(f"Logging : payload is - {payload}")
     # make a POST request to the API endpoint using the requests.post method, passing in stream=True
     response = requests.post(API_URL, headers=headers, json=payload, stream=True)
@@ -261,16 +295,19 @@ def ask_gpt(
                     + json.loads(chunk[6:])["choices"][0]["delta"]["content"]
                 )
 
-                gpt_chat_state[-1] = (gpt_chat_state[-1][0], partial_words)
-                chatbot_for_display[-1] = (
-                    chatbot_for_display[-1][0],
+                session.chat_history_for_llm[-1] = (
+                    session.chat_history_for_llm[-1][0],
+                    partial_words,
+                )
+                session.chat_history_for_display[-1] = (
+                    session.chat_history_for_display[-1][0],
                     partial_words,
                 )
 
                 token_counter += 1
-                yield chatbot_for_display, gpt_chat_state, chat_counter, response
+                yield session, response
 
-    yield chatbot_for_display, gpt_chat_state, chat_counter, response
+    yield session, response
 
 
 def beautify_gpt_response(gpt_response_json) -> str:
