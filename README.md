@@ -6,7 +6,7 @@
 - **Dynamic Grounding.** Humans will be able to chat with agent to localize novel objects.
 
 ## :fire: News
-
+[2023-05-15] The first version of DetGPT is available now! Please try out demo!
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
 ## :label: TODO
@@ -17,7 +17,10 @@ To install the dependencies we provide a Dockerfile:
 ```bash
 docker build -t chat-with-nerf:latest .
 ```
-
+Or if you want to pull remote image from Dockerhub to save significant time, please try:
+```bash
+docker pull jedyang97/chat-with-nerf:latest
+```
 Then locally you need to run
 ```bash
 git clone https://github.com/sled-group/chat-with-nerf.git
