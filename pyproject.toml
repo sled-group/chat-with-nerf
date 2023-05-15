@@ -37,13 +37,17 @@ dependencies = [
 [project.optional-dependencies]
 
 dev = [
-   "black>=23.3.0",
-   "flake8>=6.0.0",
-   "isort>=5.12.0",
-   "mypy>=1.2.0",
-   "gitlint>=0.19.1",
-   "pre-commit>=3.3.1",
-   "pytest>=7.3.1",
-   "pytest-mock>=3.10.0",
-   "ipdb>=0.13.13",
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "gitlint",
+    "pre-commit",
+    "pytest",
+    "pytest-mock",
+    "ipdb",
+    "types-Pillow",
+    "types-PyYAML",
+    "types-requests",
+    "types-urllib3"
 ]

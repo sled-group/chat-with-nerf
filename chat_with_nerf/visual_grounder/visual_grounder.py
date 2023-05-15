@@ -18,6 +18,7 @@ from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils import install_checks
 from rich.console import Console
 
+from chat_with_nerf import logger
 from chat_with_nerf.visual_grounder.crop import CropData
 from chat_with_nerf.visual_grounder.image_ref import ImageRef
 
@@ -48,12 +49,12 @@ class VisualGrounder:
 
     def taking_pictures(self) -> list[ImageRef]:
         install_checks.check_ffmpeg_installed()
-        print("picture taking process")
+        logger.info("picture taking process")
         camera_photo = self.camera_poses
         camera_path = get_path_from_json(camera_photo)
         # crop_data = get_crop_from_json(camera_path)
         camera_type = CameraType.PERSPECTIVE
-        print("sub picture taking process")
+        logger.info("sub picture taking process")
         result = self._taking_picture(
             camera_path,
             output_filename=self.output_path,

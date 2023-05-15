@@ -2,6 +2,7 @@ import json
 import os
 import threading
 import time
+from collections import defaultdict
 from collections.abc import Generator
 
 import requests
@@ -15,7 +16,12 @@ from chat_with_nerf.settings import Settings
 if not Settings.USE_FAKE_GROUNDER:
     model_context: ModelContext = ModelContextManager.get_model_context()
 else:
-    model_context = ModelContext(None, None, None)  # type: ignore
+    model_context = ModelContext(
+        scene_configs=None,  # type: ignore
+        visual_grounder=defaultdict(lambda: None),  # type: ignore
+        pipeline=None,  # type: ignore
+        blip2captioner=None,  # type: ignore
+    )  # type: ignore # this model_context is for debugging only
 
 # Streaming endpoint
 API_URL = str(os.getenv("API_URL"))
@@ -102,7 +108,7 @@ def act(
                 target=ground_with_callback,
                 args=(
                     ground_text,
-                    model_context.visual_grounder,
+                    model_context.visual_grounder[dropdown_scene],
                     model_context.blip2captioner,
                     grounding_callback,
                 ),
@@ -166,7 +172,6 @@ def ask_gpt(
         "Content-Type": "application/json",
         "api-key": OPENAI_API_KEY,
     }
-    print(f"system message is ^^ {system_msg}")
 
     if system_msg.strip() == "":
         initial_message = [
@@ -193,7 +198,6 @@ def ask_gpt(
             "presence_penalty": 0,
             "frequency_penalty": 0,
         }
-        print(f"chat_counter - {chat_counter}")
     else:  # if chat_counter != 0 :
         messages = multi_turn_message  # Of the type: [{"role": "system", "content": system_msg},]
         for data in gpt_chat_state:
@@ -231,10 +235,10 @@ def ask_gpt(
         # then give a new empty turn to chatbot_for_display to work with
         # otherwise, it would delete the last turn
         chatbot_for_display.append((None, None))
-    print(f"Logging : payload is - {payload}")
+    logger.info(f"Logging : payload is - {payload}")
     # make a POST request to the API endpoint using the requests.post method, passing in stream=True
     response = requests.post(API_URL, headers=headers, json=payload, stream=True)
-    print(f"Logging : response code - {response}")
+    logger.info(f"Logging : response code - {response}")
     token_counter = 0
     partial_words = ""
 

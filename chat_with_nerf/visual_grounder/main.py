@@ -1,5 +1,6 @@
 import numpy as np
 
+from chat_with_nerf import logger
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
 from chat_with_nerf.visual_grounder.image_ref import ImageRef
@@ -17,8 +18,8 @@ def call_visual_grounder(
     """
 
     # first step: set positive words
-    print("Set Positive Words in Visual Grounder")
-    print("positive words: ", positive_words)
+    logger.debug("Set Positive Words in Visual Grounder")
+    logger.debug("positive words: ", positive_words)
     visual_grounder.set_positive_words(positive_words)
     blip2captioner.set_positive_words(positive_words)
     # second step: take 6 images and enable parallelism
