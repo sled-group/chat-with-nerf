@@ -8,6 +8,7 @@ from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def call_visual_grounder(
+    session_id: str,
     positive_words: str,
     visual_grounder: VisualGrounder,
     blip2captioner: Blip2Captioner,
@@ -23,7 +24,7 @@ def call_visual_grounder(
     visual_grounder.set_positive_words(positive_words)
     blip2captioner.set_positive_words(positive_words)
     # second step: take 6 images and enable parallelism
-    grounder_result = visual_grounder.taking_pictures()
+    grounder_result = visual_grounder.taking_pictures(session_id)
 
     # third step: first select images above the threshold
     selected: list[ImageRef] = []
@@ -54,6 +55,6 @@ def set_positive_words(
         return {"Success": "False"}
 
 
-def take_picture(visual_grounder: VisualGrounder):
-    result = visual_grounder.taking_pictures()
+def take_picture(visual_grounder: VisualGrounder, session_id: str):
+    result = visual_grounder.taking_pictures(session_id)
     return result

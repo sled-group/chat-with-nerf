@@ -52,16 +52,17 @@ class ModelContextManager:
         pipeline = {}
         visual_grounder_ins = {}
         initial_dir = os.getcwd()
-        for scene_name, scene_config in scene_configs.items():
-            # LERF's implementation requires to find output directory
-            os.chdir(Settings.data_path + "/" + scene_name)
-            lerf_pipeline = ModelContextManager.initialize_lerf_pipeline(
-                scene_config.load_lerf_config
-            )
-            pipeline[scene_name] = lerf_pipeline
-            visual_grounder_ins[scene_name] = VisualGrounder(
-                Settings.output_path, scene_config.camera_poses, lerf_pipeline
-            )
+        for i, (scene_name, scene_config) in enumerate(scene_configs.items()):
+            if i == 0:
+                # LERF's implementation requires to find output directory
+                os.chdir(Settings.data_path + "/" + scene_name)
+                lerf_pipeline = ModelContextManager.initialize_lerf_pipeline(
+                    scene_config.load_lerf_config
+                )
+                pipeline[scene_name] = lerf_pipeline
+                visual_grounder_ins[scene_name] = VisualGrounder(
+                    Settings.output_path, scene_config.camera_poses, lerf_pipeline
+                )
 
         # move back the current directory
         os.chdir(initial_dir)
