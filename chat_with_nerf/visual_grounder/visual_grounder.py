@@ -2,6 +2,8 @@
 """Visual Grounder."""
 from __future__ import annotations
 
+import datetime
+import os
 import sys
 from pathlib import Path
 
@@ -47,7 +49,7 @@ class VisualGrounder:
         except Exception:
             return False
 
-    def taking_pictures(self) -> list[ImageRef]:
+    def taking_pictures(self, session_id: str) -> list[ImageRef]:
         install_checks.check_ffmpeg_installed()
         logger.info("picture taking process")
         camera_photo = self.camera_poses
@@ -56,6 +58,7 @@ class VisualGrounder:
         camera_type = CameraType.PERSPECTIVE
         logger.info("sub picture taking process")
         result = self._taking_picture(
+            session_id,
             camera_path,
             output_filename=self.output_path,
             rendered_output_names=["rgb", "relevancy_0"],
@@ -67,6 +70,7 @@ class VisualGrounder:
 
     def _taking_picture(
         self,
+        session_id: str,
         cameras: Cameras,
         output_filename: str,
         rendered_output_names: list[str],
@@ -88,12 +92,14 @@ class VisualGrounder:
         CONSOLE.print("[bold green]Taking 6 images... ")
         cameras.rescale_output_resolution(rendered_resolution_scaling_factor)
         cameras = cameras.to(self.lerf_pipeline.device)
-        output_filepath_path = Path(output_filename)
-        rgb_image_dir = output_filepath_path.parent / "rgb"
-        clip_image_dir = output_filepath_path.parent / "clip"
+        output_filepath_path = Path(output_filename).parent / session_id / "images"
+        rgb_image_dir = output_filepath_path / "rgb"
+        clip_image_dir = output_filepath_path / "clip"
         rgb_image_dir.mkdir(parents=True, exist_ok=True)
         clip_image_dir.mkdir(parents=True, exist_ok=True)
 
+        print("rgb_image_dir: ", rgb_image_dir)
+        print("clip_image_dir: ", clip_image_dir)
         result = {}
         return_result = []
         numpy_result = {}
@@ -152,18 +158,26 @@ class VisualGrounder:
             relevancy0 = render_image_concat[:, 512:, :]
             grayscale_data = np.mean(relevancy0, axis=2)
 
+            # Get the current timestamp
+            now = datetime.datetime.now()
+            # Format the timestamp as a string
+            timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
             # saving rgb
             rgb = "rgb" + str(camera_idx)
-            result[rgb] = str(rgb_image_dir) + "/" + str(f"{camera_idx:03d}.png")
-            media.write_image(rgb_image_dir / f"{camera_idx:03d}.png", rgb0)
+            # create file name
+            rgb_filename = rgb + "_" + timestamp_str + ".png"
+            result[rgb] = str(rgb_image_dir) + "/" + rgb_filename
+            media.write_image(result[rgb], rgb0)
 
             # saving clip
             clip = "clip" + str(camera_idx)
-            clip_file = clip + ".npy"
-            result[clip] = str(clip_image_dir) + "/" + str(f"{camera_idx:03d}.png")
-            # media.write_image(clip_image_dir / f"{camera_idx:03d}.png", rgb0)
+            clip_file = clip + "_" + timestamp_str + ".npy"
+            clip_filename = clip + "_" + timestamp_str + ".png"
+
+            result[clip] = str(clip_image_dir) + "/" + clip_filename
             plt.imsave(result[clip], grayscale_data, cmap="turbo")
 
+            # develop purpose
             numpy_result[clip] = str(clip_image_dir / clip_file)
             np.save(clip_image_dir / clip_file, relevancy0)
 

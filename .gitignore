@@ -9,3 +9,5 @@ data/
 build/
 *.egg-info
 *.zip
+session_output/
+session_data/
