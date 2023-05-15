@@ -6,7 +6,7 @@
 - **Dynamic Grounding.** Humans will be able to chat with agent to localize novel objects.
 
 ## :fire: News
-[2023-05-15] The first version of DetGPT is available now! Please try out demo!
+[2023-05-15] The first version of chat-with-nerf is available now! Please try out demo!
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
 ## :label: TODO
@@ -41,7 +41,7 @@ Then locally you need to run
 ```bash
 git clone https://github.com/sled-group/chat-with-nerf.git
 ```
-If using Docker, you can utilize the following fashion, especially mount chat-with-nerf under workspace
+If using Docker, you can use the following command to spin up a docker container with **chat-with-nerf** mounted under workspace
 ```bash
 docker run --gpus "device=0" -v /<parent_path_chat-with-nerf>/:/workspace/ -v /home/<your_username>/.cache/:/home/user/.cache/ --rm -it --shm-size=12gb chat-with-nerf:latest
 ```
