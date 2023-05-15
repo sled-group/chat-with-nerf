@@ -8,11 +8,10 @@ import gradio as gr
 from psutil import process_iter
 
 from chat_with_nerf.chat import agent
+from chat_with_nerf.chat.session import Session
 from chat_with_nerf.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.util import list_dirs
-
-INITIAL_MSG = "Hello there! What can I help you find in this room?"
 
 
 # Resetting to blank
@@ -34,14 +33,17 @@ def set_interactive_false():
     return gr.update(interactive=False)
 
 
-def change_scene(dropdown_scene: str) -> tuple[str, list, list, int, str | None]:
-    # reset model_3d, chatbot_for_display, gpt_chat_state, chat_counter, server_status_code
+def change_scene(
+    dropdown_scene: str,
+) -> tuple[str, list, int, str | None, Session]:
+    # reset model_3d, chatbot_for_display, chat_counter, server_status_code
+    new_session = Session.create_for_scene(dropdown_scene)
     return (
         os.path.join(Settings.data_path, dropdown_scene, "poly.glb"),
-        [(None, INITIAL_MSG)],
-        [],
-        0,
+        new_session.chat_history_for_display,
+        new_session.chat_counter,
         None,
+        new_session,
     )
 
 
@@ -88,8 +90,8 @@ with gr.Blocks() as demo:
                     label="3D Model",
                 )
             with gr.Column(scale=5):
-                chatbot_for_display = gr.Chatbot(
-                    value=[(None, INITIAL_MSG)],
+                chat_history_for_display = gr.Chatbot(
+                    value=[(None, Settings.INITIAL_MSG_FOR_DISPLAY)],
                     label="Chat Assistant",
                 ).style(height="600")
                 with gr.Row():
@@ -100,7 +102,7 @@ with gr.Blocks() as demo:
                         )
                     with gr.Column(scale=1, min_width=0):
                         send_button = gr.Button("Send").style(full_width=True)
-        gpt_chat_state = gr.State([])
+        session_state = gr.State(Session.create)
         with gr.Row():
             server_status_code = gr.Textbox(
                 label="Status code from OpenAI server",
@@ -144,7 +146,9 @@ with gr.Blocks() as demo:
                 interactive=True,
                 label="Temperature",
             )
-            chat_counter = gr.Number(value=0, visible=False, precision=0)
+            chat_counter = gr.Number(
+                value=0, visible=True, precision=0, label="Turn count"
+            )
 
     # Event handling
     dropdown_scene.change(
@@ -152,10 +156,10 @@ with gr.Blocks() as demo:
         inputs=[dropdown_scene],
         outputs=[
             model_3d,
-            chatbot_for_display,
-            gpt_chat_state,
+            chat_history_for_display,
             chat_counter,
             server_status_code,
+            session_state,
         ],
     )
     user_chat_input.submit(
@@ -165,12 +169,15 @@ with gr.Blocks() as demo:
             user_chat_input,
             top_p,
             temperature,
-            chat_counter,
-            gpt_chat_state,
-            chatbot_for_display,
             dropdown_scene,
+            session_state,
         ],
-        outputs=[chatbot_for_display, gpt_chat_state, chat_counter, server_status_code],
+        outputs=[
+            chat_history_for_display,
+            chat_counter,
+            server_status_code,
+            session_state,
+        ],
     )  # openai_api_key
     send_button.click(
         fn=agent.act,
@@ -179,12 +186,15 @@ with gr.Blocks() as demo:
             user_chat_input,
             top_p,
             temperature,
-            chat_counter,
-            gpt_chat_state,
-            chatbot_for_display,
             dropdown_scene,
+            session_state,
         ],
-        outputs=[chatbot_for_display, gpt_chat_state, chat_counter, server_status_code],
+        outputs=[
+            chat_history_for_display,
+            chat_counter,
+            server_status_code,
+            session_state,
+        ],
     )  # openai_api_key
 
     user_chat_input.submit(set_interactive_false, [], [system_msg])
