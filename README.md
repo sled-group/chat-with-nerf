@@ -22,7 +22,7 @@ Or if you want to pull remote image from Dockerhub to save significant time, ple
 docker pull jedyang97/chat-with-nerf:latest
 ```
 
-Otherwise, if you prefer build it locally.
+Otherwise, if you prefer build it locally:
 ```bash
 conda create --name nerfstudio -y python=3.8
 conda activate nerfstudio
