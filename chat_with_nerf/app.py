@@ -72,12 +72,16 @@ with gr.Blocks() as demo:
 
     with gr.Column():
         with gr.Row():
+            openai_api_key = gr.Textbox(
+                label="Paste your OpenAI API key here and press Enter↵",
+                type="password",
+            )
+            server_status_code = gr.Textbox(
+                label="Status code from OpenAI server", interactive=False
+            )
+        with gr.Row():
             with gr.Column(scale=5):
                 # GPT4 API Key is provided by Huggingface
-                openai_api_key = gr.Textbox(
-                    label="Paste your OpenAI API key here and press Enter↵",
-                    type="password",
-                )
                 dropdown_scene = gr.Dropdown(
                     choices=list_dirs(Settings.data_path),
                     value="office",
@@ -103,10 +107,6 @@ with gr.Blocks() as demo:
                     with gr.Column(scale=1, min_width=0):
                         send_button = gr.Button("Send").style(full_width=True)
         session_state = gr.State(Session.create)
-        with gr.Row():
-            server_status_code = gr.Textbox(
-                label="Status code from OpenAI server",
-            )
 
         # Examples
         with gr.Accordion(label="Examples for user message:", open=True):

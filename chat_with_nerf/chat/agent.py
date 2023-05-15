@@ -13,6 +13,7 @@ from chat_with_nerf.chat.grounder import ground_with_callback
 from chat_with_nerf.chat.session import Session
 from chat_with_nerf.model.model_context import ModelContext, ModelContextManager
 from chat_with_nerf.settings import Settings
+from chat_with_nerf.util import get_status_code_and_reason
 
 if not Settings.USE_FAKE_GROUNDER:
     model_context: ModelContext = ModelContextManager.get_model_context()
@@ -43,7 +44,7 @@ def act(
     temperature: float,
     dropdown_scene: str,
     session: Session,
-) -> Generator[tuple[list[tuple], int, Response | None, Session], None, None,]:
+) -> Generator[tuple[list[tuple], int, str | None, Session], None, None]:
     session.chat_history_for_display.append(
         (inputs, "")
     )  # append in a tuple format, first is user input, second is assistant response
@@ -54,30 +55,65 @@ def act(
         session,
     )
 
+    retry_sleep_time = 0.2
     give_control_to_user = False
     for _ in range(MAX_ITERATION):  # iterate until GPT decides to give control to user
         if give_control_to_user:
             break
 
-        for session, response in ask_gpt(
-            system_msg,
-            inputs,
-            top_p,
-            temperature,
-            session,
-        ):
+        response: Response
+        try:
+            for returned_session, returned_response in ask_gpt(
+                system_msg,
+                inputs,
+                top_p,
+                temperature,
+                session,
+            ):
+                session = returned_session
+                response = returned_response
+                yield (
+                    session.chat_history_for_display,
+                    session.chat_counter,
+                    get_status_code_and_reason(response),
+                    session,
+                )
+                # sometimes GPT returns an empty response because there were too many requests
+                # in this case we don't change the chat_history_for_llm, simply re-issue the request
+                if response.status_code == 429:
+                    msg = "The chat agent is overloaded with too many requests."
+                    logger.error(msg)
+                    raise ValueError(msg)
+        except ValueError:
+            # sometimes GPT returns "The server is currently overloaded with other requests."
+            # no need to modify the chat_history_for_llm in this case, simply re-issue the request
+            session.chat_history_for_display.append(
+                (None, "SYSTEM: There was a network issue. Retrying...")
+            )
             yield (
                 session.chat_history_for_display,
                 session.chat_counter,
-                response,
+                get_status_code_and_reason(response),
                 session,
             )
+            time.sleep(secs=retry_sleep_time)
+            retry_sleep_time *= 2  # exponential backoff
+            continue
 
         # done streaming
         try:
             gpt_response_json = json.loads(session.chat_history_for_llm[-1][1])
         except json.decoder.JSONDecodeError:
-            inputs = "SYSTEM: The above response caused an error: json.decoder.JSONDecodeError"
+            # if reaches here, then it means GPT-4 indeed returned a non-JSON response
+            logger.error(
+                f"Cannot decode GPT response: {session.chat_history_for_llm[-1][1]}"
+            )
+            # need to modify the chat_history_for_llm in this case
+            # so that the LLM knows it has made a mistake
+            inputs = (
+                "SYSTEM: The above response caused an error: json.decoder.JSONDecodeError. "
+                "Retrying..."
+            )
             continue
 
         beautified_response_markdown = beautify_gpt_response(gpt_response_json)
@@ -88,7 +124,7 @@ def act(
         yield (
             session.chat_history_for_display,
             session.chat_counter,
-            response,
+            get_status_code_and_reason(response),
             session,
         )
 
@@ -146,7 +182,7 @@ def act(
                 yield (
                     session.chat_history_for_display,
                     session.chat_counter,
-                    response,
+                    get_status_code_and_reason(response),
                     session,
                 )
                 time.sleep(0.5)  # Adjust the sleep duration as needed
@@ -166,7 +202,7 @@ def act(
         yield (
             session.chat_history_for_display,
             session.chat_counter,
-            response,
+            get_status_code_and_reason(response),
             session,
         )
 
@@ -175,7 +211,7 @@ def act(
     yield (
         session.chat_history_for_display,
         session.chat_counter,
-        response,
+        get_status_code_and_reason(response),
         session,
     )
 
@@ -287,8 +323,14 @@ def ask_gpt(
         if chunk.decode():
             chunk = chunk.decode()
             # decode each line as response data is in bytes
-            if (
+            if chunk.startswith("error:"):
+                # sometimes GPT returns "The server is currently overloaded with other requests."
+                msg = f"Received error from API: {chunk}"
+                logger.error(msg)
+                raise ValueError(msg)
+            elif (
                 len(chunk) > 12
+                and chunk.startswith("data:")
                 and "content" in json.loads(chunk[6:])["choices"][0]["delta"]
             ):
                 partial_words = (
