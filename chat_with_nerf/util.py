@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+from requests import Response
 
 
 def list_dirs(root_dir):
@@ -49,3 +50,7 @@ def rotate_z(angle_degrees: int, c2w: np.ndarray) -> np.ndarray:
         ]
     )
     return c2w @ rotation_matrix
+
+
+def get_status_code_and_reason(response: Response) -> str:
+    return f"{response.status_code} - {response.reason}"

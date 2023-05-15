@@ -20,9 +20,7 @@ RESPONSE FORMAT:
     {
         "text": "thought",
         "reasoning": "reasoning",
-        "plan": "- short bulleted
-- list that conveys
-- long-term plan",
+        "plan": "- short bulleted\t- list that conveys\t- long-term plan",
         "criticism": "constructive self-criticism",
         "speak": "thoughts summary to say to user"
     },
