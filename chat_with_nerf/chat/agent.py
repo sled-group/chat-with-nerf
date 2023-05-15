@@ -119,6 +119,7 @@ def act(
             threading.Thread(
                 target=ground_with_callback,
                 args=(
+                    session.session_id,
                     ground_text,
                     model_context.visual_grounder[dropdown_scene],
                     model_context.blip2captioner,
