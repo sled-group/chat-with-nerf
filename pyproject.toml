@@ -24,7 +24,7 @@ dependencies = [
     "pyyaml",
     "numpy",
     "attrs",
-    "gradio",
+    "gradio>=3.30.0",
     "torch",
     "salesforce-lavis",
     "Pillow",
