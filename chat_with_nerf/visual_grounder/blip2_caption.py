@@ -49,10 +49,12 @@ class Blip2Captioner:
                 .to(self.model.device)
             )
             question = (
-                "Question: Describe the "
-                + self.positive_words
-                + " focusing on color, size, shape and other features in this image?"
-                + "Please answer in the sentence format. Answer:"
+                "Question: Describe objects focusing on color, size, shape and other"
+                " features in the image in detail. Answer:"
+                # "Question: Describe the "
+                # + self.positive_words
+                # + " focusing on color, size, shape and other features in this image?"
+                # + "Please answer in the sentence format. Answer:"
             )
             answer = self.model.generate({"image": image, "prompt": question})[0]  # type: ignore
             result[image_ref.rgb_address] = answer
