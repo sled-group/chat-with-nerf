@@ -14,6 +14,7 @@
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
 ## :label: TODO
+- Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
 
 ## :hammer_and_wrench: Install
 
