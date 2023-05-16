@@ -55,7 +55,7 @@ def act(
         session,
     )
 
-    retry_sleep_time = 0.2
+    retry_sleep_time = 1
     give_control_to_user = False
     for _ in range(MAX_ITERATION):  # iterate until GPT decides to give control to user
         if give_control_to_user:
@@ -72,6 +72,10 @@ def act(
             ):
                 session = returned_session
                 response = returned_response
+                session.chat_history_for_display[-1] = (
+                    session.chat_history_for_display[-1][0],
+                    "```json" + session.chat_history_for_display[-1][1],
+                )  # display GPT response in code block
                 yield (
                     session.chat_history_for_display,
                     session.chat_counter,
@@ -96,7 +100,7 @@ def act(
                 get_status_code_and_reason(response),
                 session,
             )
-            time.sleep(secs=retry_sleep_time)
+            time.sleep(retry_sleep_time)
             retry_sleep_time *= 2  # exponential backoff
             continue
 
@@ -218,17 +222,15 @@ def act(
 
 def display_grounder_results(
     grounder_results: list[tuple[str, str]]
-) -> tuple[list[tuple[None, str | tuple]], str]:
+) -> tuple[list[tuple[None, str]], str]:
     """Display grounder results in markdown format."""
-    chatbot_msg_for_user: list[tuple[None, str | tuple]] = []
+    str_for_user = ""
     pure_text_for_gpt = ""
     for i, (img_path, caption) in enumerate(grounder_results):
-        chatbot_msg_for_user += [
-            (None, f"Image {i+1}: {caption}"),
-            (None, (img_path, caption)),
-        ]
+        str_for_user += f"Image {i+1}: {caption}\n ![caption](file={img_path})\n"
         pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
     logger.info(f"pure_text_for_gpt: {pure_text_for_gpt}")
+    chatbot_msg_for_user = [(None, str_for_user)]
     return chatbot_msg_for_user, pure_text_for_gpt
 
 
@@ -355,20 +357,20 @@ def ask_gpt(
 
 def beautify_gpt_response(gpt_response_json) -> str:
     # beautify the response
-    beautified_response_markdown = "#### Agent Reasoning Summary ####\n"
+    beautified_response_markdown = "# **Agent Reasoning Summary**\n"
     beautified_response_markdown += (
-        f"Text:\n {gpt_response_json['thoughts']['text']}\n\n"
+        f"- Observation:\n {gpt_response_json['thoughts']['observation']}\n\n"
     )
     beautified_response_markdown += (
-        f"Reasoning:\n {gpt_response_json['thoughts']['reasoning']}\n\n"
+        f"- Reasoning:\n {gpt_response_json['thoughts']['reasoning']}\n\n"
     )
     beautified_response_markdown += (
-        f"Plan:\n {gpt_response_json['thoughts']['reasoning']}\n\n"
+        f"- Plan:\n {gpt_response_json['thoughts']['reasoning']}\n\n"
     )
     beautified_response_markdown += (
-        f"Criticism:\n {gpt_response_json['thoughts']['criticism']}\n\n"
+        f"- Criticism:\n {gpt_response_json['thoughts']['criticism']}\n\n"
     )
     beautified_response_markdown += (
-        f"Speak:\n {gpt_response_json['thoughts']['speak']}\n\n"
+        f"- Speak:\n {gpt_response_json['thoughts']['speak']}\n\n"
     )
     return beautified_response_markdown
