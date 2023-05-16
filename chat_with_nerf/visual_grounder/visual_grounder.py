@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import os
 import sys
 from pathlib import Path
 
@@ -98,8 +97,6 @@ class VisualGrounder:
         rgb_image_dir.mkdir(parents=True, exist_ok=True)
         clip_image_dir.mkdir(parents=True, exist_ok=True)
 
-        print("rgb_image_dir: ", rgb_image_dir)
-        print("clip_image_dir: ", clip_image_dir)
         result = {}
         return_result = []
         numpy_result = {}
