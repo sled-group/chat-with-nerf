@@ -1,5 +1,8 @@
 # :sauropod: Chat with NeRF
 
+[![Project](https://img.shields.io/badge/Project-Page-20B2AA.svg)](https://chat-with-nerf.github.io/)
+[![Demo](https://img.shields.io/badge/Website-Demo-ff69b4.svg)](http://sled-whistler.eecs.umich.edu:7777/)
+
 ## :bulb: Highlight
 
 - **Open-Vocabulary 3D Localization.** Localize **everything** with language!
