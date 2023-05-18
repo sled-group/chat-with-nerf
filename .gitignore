@@ -11,3 +11,4 @@ build/
 *.zip
 session_output/
 session_data/
+notebooks/
