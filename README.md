@@ -1,4 +1,4 @@
-# :sauropod: Chat with NeRF
+# :sauropod: Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog
 
 [![Project](https://img.shields.io/badge/Project-Page-20B2AA.svg)](https://chat-with-nerf.github.io/)
 [![Demo](https://img.shields.io/badge/Website-Demo-ff69b4.svg)](http://sled-whistler.eecs.umich.edu:7777/)
