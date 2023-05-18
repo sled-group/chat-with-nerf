@@ -91,7 +91,7 @@ class VisualGrounder:
         CONSOLE.print("[bold green]Taking 6 images... ")
         cameras.rescale_output_resolution(rendered_resolution_scaling_factor)
         cameras = cameras.to(self.lerf_pipeline.device)
-        output_filepath_path = Path(output_filename).parent / session_id / "images"
+        output_filepath_path = Path(output_filename) / session_id / "images"
         rgb_image_dir = output_filepath_path / "rgb"
         clip_image_dir = output_filepath_path / "clip"
         rgb_image_dir.mkdir(parents=True, exist_ok=True)
