@@ -15,7 +15,7 @@
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
 ## :label: TODO
-- Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
+- [ ] Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
 
 ## :hammer_and_wrench: Install
 
@@ -64,4 +64,21 @@ To run the demo:
 ```
 cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
+```
+
+## Related Work
+- [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
+- [LERF](https://github.com/kerrj/lerf)
+- [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2)
+- [LLaVA](https://github.com/haotian-liu/LLaVA)
+
+## Citation
+```
+ @misc{chat-with-nerf-2023,
+    title = {Chat with NeRF: Open-Vocabulary Object Grounding in Neural Radiance Field through Dialog},
+    url = {\url{https://github.com/sled-group/chat-with-nerf}},
+    author = {Yang, Jianing and Chen, Xuweiyi and Qian, Shengyi and Fouhey, David and Chai, Joyce},
+    month = {May},
+    year = {2023}
+}
 ```
