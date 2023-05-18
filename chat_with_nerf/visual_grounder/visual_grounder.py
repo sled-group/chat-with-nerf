@@ -43,7 +43,7 @@ class VisualGrounder:
         positive_word_list = [positive_word]
 
         try:
-            self.lerf_pipeline.image_encoder.set_positives(positive_word_list)
+            self.lerf_pipeline.image_encoder.set_positives(positive_word_list)  # type: ignore
             return True
         except Exception:
             return False

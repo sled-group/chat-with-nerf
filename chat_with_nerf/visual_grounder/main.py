@@ -22,7 +22,6 @@ def call_visual_grounder(
     logger.debug("Set Positive Words in Visual Grounder")
     logger.debug("positive words: ", positive_words)
     visual_grounder.set_positive_words(positive_words)
-    captioner.set_positive_words(positive_words)
     # second step: take 6 images and enable parallelism
     grounder_result = visual_grounder.taking_pictures(session_id)
 

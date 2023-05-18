@@ -5,21 +5,20 @@ from typing import Optional
 
 import torch
 import yaml
-from attrs import define
-from lavis.models import load_model_and_preprocess  # type: ignore
+from attrs import Factory, define
+
+# from lavis.models import load_model_and_preprocess  # type: ignore
 from llava import LlavaLlamaForCausalLM
 from llava.utils import disable_torch_init
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils.eval_utils import eval_setup
-from transformers import AutoModelForCausalLM  # type: ignore
 from transformers import AutoTokenizer, CLIPImageProcessor, CLIPVisionModel
 
 from chat_with_nerf import logger
 from chat_with_nerf.model.scene_config import SceneConfig
 from chat_with_nerf.settings import Settings
-from chat_with_nerf.visual_grounder.captioner import (
+from chat_with_nerf.visual_grounder.captioner import (  # Blip2Captioner,
     BaseCaptioner,
-    Blip2Captioner,
     LLaVaCaptioner,
 )
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
@@ -55,7 +54,8 @@ class ModelContextManager:
 
         logger.info("Initialize Captioner")
         if Settings.TYPE_CAPTIONER == "blip2":
-            captioner = ModelContextManager.initiaze_blip_captioner()
+            print("blip2")
+            # captioner = ModelContextManager.initiaze_blip_captioner()
         else:
             captioner = ModelContextManager.initiaze_llava_captioner()
 
@@ -95,16 +95,16 @@ class ModelContextManager:
             scenes[subdirectory] = scene
         return scenes
 
-    @staticmethod
-    def initiaze_blip_captioner() -> Blip2Captioner:
-        model, vis_processors, _ = load_model_and_preprocess(
-            name="blip2_t5",
-            model_type="pretrain_flant5xxl",
-            is_eval=True,
-            device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
-        )
+    # @staticmethod
+    # def initiaze_blip_captioner() -> Blip2Captioner:
+    #     model, vis_processors, _ = load_model_and_preprocess(
+    #         name="blip2_t5",
+    #         model_type="pretrain_flant5xxl",
+    #         is_eval=True,
+    #         device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
+    #     )
 
-        return Blip2Captioner(model, vis_processors)
+    #     return Blip2Captioner(model, vis_processors)
 
     @staticmethod
     def initiaze_llava_captioner() -> LLaVaCaptioner:
@@ -154,9 +154,16 @@ class ModelContextManager:
             )
         image_token_len = (vision_config.image_size // vision_config.patch_size) ** 2
 
-        return LLaVaCaptioner(
-            model, image_processor, tokenizer, mm_use_im_start_end, image_token_len
+        captioner = LLaVaCaptioner(
+            model,
+            image_processor,
+            Factory(list),
+            tokenizer,
+            mm_use_im_start_end,
+            image_token_len,
+            "computer",
         )
+        return captioner
 
     @staticmethod
     def initialize_lerf_pipeline(load_config: str) -> Pipeline:

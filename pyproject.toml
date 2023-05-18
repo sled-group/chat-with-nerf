@@ -21,7 +21,6 @@ classifiers = [
 ]
 
 dependencies = [
-<<<<<<< HEAD
     "setuptools>=67.7.2",
     "pathtools>=0.1.2",
     "promise>=2.3",
@@ -31,19 +30,14 @@ dependencies = [
     "attrs>=23.1.0",
     "omegaconf>=2.3.0",
     "gradio>=3.30.0",
-=======
-    "pyyaml",
-    "numpy",
-    "attrs",
-    "cattrs",
-    "gradio>=3.31.0",
->>>>>>> 6c7a60ba2a83c921ffffa9ed7acebc1aa136037e
     "torch",
     "Pillow>=9.5.0",
     "torchtyping",
     "nerfstudio<=0.2.1",
     "lerf>=0.1.0",
-    "types-requests"
+    "cattrs",
+    "types-requests",
+    "einops==0.6.1"
 ]
 
 [project.optional-dependencies]
