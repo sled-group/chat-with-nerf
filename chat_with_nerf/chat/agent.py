@@ -22,7 +22,7 @@ else:
         scene_configs=None,  # type: ignore
         visual_grounder=defaultdict(lambda: None),  # type: ignore
         pipeline=None,  # type: ignore
-        blip2captioner=None,  # type: ignore
+        captioner=None,  # type: ignore
     )  # type: ignore # this model_context is for debugging only
 
 # Streaming endpoint
@@ -74,7 +74,8 @@ def act(
                 response = returned_response
                 session.chat_history_for_display[-1] = (
                     session.chat_history_for_display[-1][0],
-                    "```json" + session.chat_history_for_display[-1][1],
+                    # "```json" +
+                    session.chat_history_for_display[-1][1],
                 )  # display GPT response in code block
                 yield (
                     session.chat_history_for_display,
@@ -162,7 +163,7 @@ def act(
                     session.session_id,
                     ground_text,
                     model_context.visual_grounder[dropdown_scene],
-                    model_context.blip2captioner,
+                    model_context.captioner,
                     grounding_callback,
                 ),
             ).start()

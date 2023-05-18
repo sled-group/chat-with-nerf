@@ -21,16 +21,20 @@ classifiers = [
 ]
 
 dependencies = [
-    "pyyaml",
-    "numpy",
-    "attrs",
+    "setuptools>=67.7.2",
+    "pathtools>=0.1.2",
+    "promise>=2.3",
+    "pybind11>=2.10.4",
+    "pyyaml>=6.0",
+    "numpy>=1.24.3",
+    "attrs>=23.1.0",
+    "omegaconf>=2.3.0",
     "gradio>=3.30.0",
     "torch",
-    "salesforce-lavis",
-    "Pillow",
+    "Pillow>=9.5.0",
     "torchtyping",
-    "nerfstudio",
-    "lerf",
+    "nerfstudio<=0.2.1",
+    "lerf>=0.1.0",
     "types-requests"
 ]
 

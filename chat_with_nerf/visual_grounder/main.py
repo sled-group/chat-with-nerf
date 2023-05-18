@@ -2,7 +2,7 @@ import numpy as np
 
 from chat_with_nerf import logger
 from chat_with_nerf.settings import Settings
-from chat_with_nerf.visual_grounder.blip2_caption import Blip2Captioner
+from chat_with_nerf.visual_grounder.captioner import BaseCaptioner
 from chat_with_nerf.visual_grounder.image_ref import ImageRef
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
@@ -11,7 +11,7 @@ def call_visual_grounder(
     session_id: str,
     positive_words: str,
     visual_grounder: VisualGrounder,
-    blip2captioner: Blip2Captioner,
+    captioner: BaseCaptioner,
 ) -> dict[str, str]:
     """Return a dictionary of image path and its corresponding caption.
 
@@ -22,7 +22,7 @@ def call_visual_grounder(
     logger.debug("Set Positive Words in Visual Grounder")
     logger.debug("positive words: ", positive_words)
     visual_grounder.set_positive_words(positive_words)
-    blip2captioner.set_positive_words(positive_words)
+    captioner.set_positive_words(positive_words)
     # second step: take 6 images and enable parallelism
     grounder_result = visual_grounder.taking_pictures(session_id)
 
@@ -37,8 +37,8 @@ def call_visual_grounder(
 
     # fourth step: feed corresponding images to the BLIPv2
     # and acquire descriptions
-    blip2captioner.load_images(selected)
-    captioner_result = blip2captioner.blip2caption()
+    captioner.load_images(selected)
+    captioner_result = captioner.caption()
 
     # fifth step: send corresponding image and caption pair to the GPT-4
     # return image and comments pair
