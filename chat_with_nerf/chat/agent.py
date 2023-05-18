@@ -72,10 +72,6 @@ def act(
             ):
                 session = returned_session
                 response = returned_response
-                session.chat_history_for_display[-1] = (
-                    session.chat_history_for_display[-1][0],
-                    "```json" + session.chat_history_for_display[-1][1],
-                )  # display GPT response in code block
                 yield (
                     session.chat_history_for_display,
                     session.chat_counter,

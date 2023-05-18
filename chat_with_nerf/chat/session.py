@@ -1,5 +1,8 @@
+import json
+import os
 import uuid
 
+import cattrs
 from attrs import define
 
 from chat_with_nerf import logger
@@ -35,6 +38,16 @@ class Session:
         )
         return session
 
-    def save(self):
-        # TODO: save to disk/db
-        pass
+    def save(self) -> None:
+        """Save the session as a json file."""
+        logger.info(f"Saving session {self.session_id} to disk.")
+
+        # Create the directory and any parent directories if they don't exist
+        os.makedirs(os.path.join(Settings.output_path, self.session_id), exist_ok=True)
+
+        # Write content to the file
+        with open(
+            os.path.join(Settings.output_path, self.session_id, "session.json"), "w"
+        ) as f:
+            json.dump(cattrs.unstructure(self), f, indent=4)
+        logger.info(f"Session {self.session_id} saved to disk.")
