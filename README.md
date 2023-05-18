@@ -75,7 +75,7 @@ export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ## Citation
 ```
  @misc{chat-with-nerf-2023,
-    title = {Chat with NeRF: Open-Vocabulary Object Grounding in Neural Radiance Field through Dialog},
+    title = {Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog},
     url = {\url{https://github.com/sled-group/chat-with-nerf}},
     author = {Yang, Jianing and Chen, Xuweiyi and Qian, Shengyi and Fouhey, David and Chai, Joyce},
     month = {May},
