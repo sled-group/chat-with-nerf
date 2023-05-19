@@ -21,18 +21,23 @@ classifiers = [
 ]
 
 dependencies = [
-    "pyyaml",
-    "numpy",
-    "attrs",
-    "cattrs",
-    "gradio>=3.31.0",
+    "setuptools>=67.7.2",
+    "pathtools>=0.1.2",
+    "promise>=2.3",
+    "pybind11>=2.10.4",
+    "pyyaml>=6.0",
+    "numpy>=1.24.3",
+    "attrs>=23.1.0",
+    "omegaconf>=2.3.0",
+    "gradio>=3.30.0",
     "torch",
-    "salesforce-lavis",
-    "Pillow",
+    "Pillow>=9.5.0",
     "torchtyping",
-    "nerfstudio",
-    "lerf",
-    "types-requests"
+    "nerfstudio<=0.2.1",
+    "lerf>=0.1.0",
+    "cattrs",
+    "types-requests",
+    "einops==0.6.1"
 ]
 
 [project.optional-dependencies]

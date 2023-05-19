@@ -155,6 +155,7 @@ RUN python3.10 -m pip install omegaconf
 # Install nerfstudio dependencies.
 RUN git clone https://github.com/nerfstudio-project/nerfstudio.git && \
     cd nerfstudio && \
+    git checkout v0.2.1 &&\
     pip install --upgrade pip setuptools && \
     pip install -e . && \
     cd ..
@@ -162,6 +163,7 @@ RUN git clone https://github.com/nerfstudio-project/nerfstudio.git && \
 # Install lerf dependencies.
 RUN git clone https://github.com/kerrj/lerf.git && \
     cd lerf && \
+    git checkout ca94b13 &&\
     python3.10 -m pip install -e . && \
     cd ..
 
