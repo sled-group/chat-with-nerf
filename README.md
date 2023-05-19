@@ -1,12 +1,13 @@
-# :sauropod: Chat with NeRF
+# :camera_flash: Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog
 
 [![Project](https://img.shields.io/badge/Project-Page-20B2AA.svg)](https://chat-with-nerf.github.io/)
 [![Demo](https://img.shields.io/badge/Website-Demo-ff69b4.svg)](http://sled-whistler.eecs.umich.edu:7777/)
+[![Embark](https://img.shields.io/badge/Discord-Chat--with--NeRF-%237289da.svg?logo=discord)](https://discord.gg/8rT4GpRq9g)
 
 ![Demo of Chat-with-NeRF](figures/demo.png "Overview")
 ## :bulb: Highlight
 
-- **Open-Vocabulary 3D Localization.** Localize **everything** with language!
+- **Open-Vocabulary 3D Localization.** Locate **anything** with natural language dialog!
 - **Dynamic Grounding.** Humans will be able to chat with agent to localize novel objects.
 
 ## :fire: News
@@ -14,7 +15,7 @@
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
 ## :label: TODO
-- Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
+- [ ] Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
 
 ## :hammer_and_wrench: Install
 
@@ -63,4 +64,21 @@ To run the demo:
 ```
 cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
+```
+
+## Related Work
+- [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
+- [LERF](https://github.com/kerrj/lerf)
+- [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2)
+- [LLaVA](https://github.com/haotian-liu/LLaVA)
+
+## Citation
+```
+ @misc{chat-with-nerf-2023,
+    title = {Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog},
+    url = {\url{https://github.com/sled-group/chat-with-nerf}},
+    author = {Yang, Jianing and Chen, Xuweiyi and Qian, Shengyi and Fouhey, David and Chai, Joyce},
+    month = {May},
+    year = {2023}
+}
 ```

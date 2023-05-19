@@ -52,5 +52,7 @@ def rotate_z(angle_degrees: int, c2w: np.ndarray) -> np.ndarray:
     return c2w @ rotation_matrix
 
 
-def get_status_code_and_reason(response: Response) -> str:
+def get_status_code_and_reason(response: Response | None) -> str:
+    if response is None:
+        return ""
     return f"{response.status_code} - {response.reason}"
