@@ -61,7 +61,7 @@ def act(
         if give_control_to_user:
             break
 
-        response: Response
+        response: Response | None
         try:
             for returned_session, returned_response in ask_gpt(
                 system_msg,
@@ -80,7 +80,7 @@ def act(
                 )
                 # sometimes GPT returns an empty response because there were too many requests
                 # in this case we don't change the chat_history_for_llm, simply re-issue the request
-                if response.status_code == 429:
+                if response and response.status_code == 429:
                     msg = "The chat agent is overloaded with too many requests."
                     logger.error(msg)
                     raise ValueError(msg)
@@ -236,7 +236,17 @@ def ask_gpt(
     top_p: float,
     temperature: float,
     session: Session,
-) -> Generator[tuple[Session, Response], None, None]:
+) -> Generator[tuple[Session, Response | None], None, None]:
+    if session.chat_counter >= Settings.MAX_TURNS:
+        session.chat_history_for_display.append(
+            (
+                None,
+                f"SYSTEM: Maximum number of turns ({Settings.MAX_TURNS}) reached. Ending dialog.",
+            )
+        )
+        yield session, None
+        return
+
     headers = {
         "Content-Type": "application/json",
         "api-key": OPENAI_API_KEY,

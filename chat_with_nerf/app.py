@@ -72,13 +72,23 @@ with gr.Blocks() as demo:
 
     with gr.Column():
         with gr.Row():
-            openai_api_key = gr.Textbox(
-                label="Paste your OpenAI API key here and press Enter↵",
-                type="password",
-            )
-            server_status_code = gr.Textbox(
-                label="Status code from OpenAI server", interactive=False
-            )
+            with gr.Column(scale=5):
+                openai_api_key = gr.Textbox(
+                    label=(
+                        "Paste your OpenAI API key here and press Enter↵ "
+                        "or leave emtpy for free trial"
+                    ),
+                    type="password",
+                )
+            with gr.Column(scale=5):
+                with gr.Row():
+                    chat_counter = gr.Textbox(
+                        value=0,
+                        label=f"Turn count (free trial limit: {Settings.MAX_TURNS})",
+                    )
+                    server_status_code = gr.Textbox(
+                        label="Status code from OpenAI server", interactive=False
+                    )
         with gr.Row():
             with gr.Column(scale=5):
                 # GPT4 API Key is provided by Huggingface
@@ -105,20 +115,24 @@ with gr.Blocks() as demo:
                             show_label=False,
                         )
                     with gr.Column(scale=1, min_width=0):
-                        send_button = gr.Button("Send").style(full_width=True)
+                        send_button = gr.Button("Send", variant="primary").style(
+                            full_width=True
+                        )
+                clear_button = gr.Button("Clear").style(full_width=True)
         session_state = gr.State(Session.create)
 
         # Examples
         with gr.Accordion(label="Examples for user message:", open=True):
             gr.Examples(
                 examples=[
+                    ["a monitor"],
                     ["I want to sit down."],
-                    ["yellow sofa"],
-                    ["I want something to drink"],
+                    ["Can I get something to drink?"],
+                    ["Find a table."],
                 ],
                 inputs=user_chat_input,
             )
-        with gr.Accordion(label="System instruction:", open=False):
+        with gr.Accordion(label="System instruction:", open=False, visible=False):
             system_msg = gr.Textbox(
                 label="Instruct the AI Assistant to set its beaviour",
                 info=system_msg_info,
@@ -146,12 +160,20 @@ with gr.Blocks() as demo:
                 interactive=True,
                 label="Temperature",
             )
-            chat_counter = gr.Number(
-                value=0, visible=True, precision=0, label="Turn count"
-            )
 
     # Event handling
     dropdown_scene.change(
+        fn=change_scene,
+        inputs=[dropdown_scene],
+        outputs=[
+            model_3d,
+            chat_history_for_display,
+            chat_counter,
+            server_status_code,
+            session_state,
+        ],
+    )
+    clear_button.click(
         fn=change_scene,
         inputs=[dropdown_scene],
         outputs=[
@@ -212,9 +234,11 @@ for x in range(1, 8):  # try 8 times
     try:
         # put your logic here
         gr.close_all()
-        demo.queue(max_size=99, concurrency_count=20).launch(
-            debug=True, server_name="0.0.0.0", server_port=port
-        )
+        demo.queue(
+            max_size=99,
+            concurrency_count=20,
+            api_open=False,
+        ).launch(debug=True, server_name="0.0.0.0", server_port=port)
     except OSError:
         for proc in process_iter():
             for conns in proc.connections(kind="inet"):

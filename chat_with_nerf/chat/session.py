@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import uuid
@@ -15,6 +16,7 @@ class Session:
     history and the current scene."""
 
     session_id: str
+    start_time: str
     scene: str
     chat_history_for_llm: list[tuple]
     chat_history_for_display: list[tuple]
@@ -28,6 +30,7 @@ class Session:
     def create_for_scene(cls, scene: str):
         session = cls(
             session_id=str(uuid.uuid4()),
+            start_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             scene=scene,
             chat_history_for_llm=[],
             chat_history_for_display=[(None, Settings.INITIAL_MSG_FOR_DISPLAY)],

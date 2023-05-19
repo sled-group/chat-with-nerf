@@ -4,4 +4,5 @@ class Settings:
     threshold: float = 0.7
     default_scene: str = "office"
     INITIAL_MSG_FOR_DISPLAY = "Hello there! What can I help you find in this room?"
+    MAX_TURNS = 8
     USE_FAKE_GROUNDER: bool = False
