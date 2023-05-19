@@ -42,7 +42,7 @@ git clone https://github.com/kerrj/lerf
 python -m pip install -e .
 ns-train -h
 ```
-Note that specific CUDA 11.3 is required. For further information, please check NeRFStudio installation
+Note that specific CUDA 11.3 is required. For further information, please check nerfstudio installation
 guide.
 
 Then locally you need to run
