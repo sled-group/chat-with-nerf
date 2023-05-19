@@ -1,13 +1,15 @@
-from PIL import Image
 import glob
 import os
 from pathlib import Path
+
+from PIL import Image
+from transformers import CLIPModel, CLIPProcessor
+
 from chat_with_nerf import logger
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.captioner import BaseCaptioner
 from chat_with_nerf.visual_grounder.image_ref import ImageRef
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
-from transformers import CLIPProcessor, CLIPModel
 
 
 def call_visual_grounder(

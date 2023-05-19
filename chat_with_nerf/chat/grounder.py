@@ -1,7 +1,8 @@
 from typing import Callable
 
+from transformers import CLIPModel, CLIPProcessor
+
 from chat_with_nerf import logger
-from transformers import CLIPProcessor, CLIPModel
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.captioner import BaseCaptioner
 from chat_with_nerf.visual_grounder.main import call_visual_grounder

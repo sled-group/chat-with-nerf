@@ -6,6 +6,7 @@ from llava.conversation import SeparatorStyle, conv_templates
 from llava.model import *  # noqa: F401, F403
 from llava.model.utils import KeywordsStoppingCriteria
 from PIL import Image
+
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.image_ref import ImageRef
 

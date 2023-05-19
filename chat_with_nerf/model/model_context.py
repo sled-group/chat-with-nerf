@@ -6,14 +6,19 @@ from typing import Optional
 import torch
 import yaml
 from attrs import Factory, define
-from transformers import CLIPProcessor, CLIPModel
 
 # from lavis.models import load_model_and_preprocess  # type: ignore
 from llava import LlavaLlamaForCausalLM
 from llava.utils import disable_torch_init
 from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils.eval_utils import eval_setup
-from transformers import AutoTokenizer, CLIPImageProcessor, CLIPVisionModel
+from transformers import (
+    AutoTokenizer,
+    CLIPImageProcessor,
+    CLIPModel,
+    CLIPProcessor,
+    CLIPVisionModel,
+)
 
 from chat_with_nerf import logger
 from chat_with_nerf.model.scene_config import SceneConfig
