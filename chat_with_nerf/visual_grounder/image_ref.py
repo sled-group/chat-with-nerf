@@ -7,8 +7,8 @@ from PIL.Image import Image
 
 @define
 class ImageRef:
-    id: int
-    clip_address: str
+    # id: int
+    # clip_address: str
     rgb_address: str
-    encoding: np.ndarray
-    raw_image: Optional[Image] = None
+    # encoding: np.ndarray
+    rgb_image: Optional[Image] = None

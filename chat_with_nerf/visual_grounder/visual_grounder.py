@@ -32,7 +32,7 @@ class VisualGrounder:
     """Output path."""
     camera_poses: dict
     """Determined camera poses."""
-    lerf_pipeline: Pipeline
+    lerf_pipeline: Pipeline | None
     """LERF pipeline."""
     downscale_factor: float = 1
     """Scaling factor to apply to the camera image resolution."""

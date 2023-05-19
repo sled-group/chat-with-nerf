@@ -6,6 +6,7 @@ from typing import Optional
 import torch
 import yaml
 from attrs import Factory, define
+from transformers import CLIPProcessor, CLIPModel
 
 # from lavis.models import load_model_and_preprocess  # type: ignore
 from llava import LlavaLlamaForCausalLM
@@ -26,10 +27,12 @@ from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 @define
 class ModelContext:
-    scene_configs: dict[str, SceneConfig]
-    visual_grounder: dict[str, VisualGrounder]
-    pipeline: dict[str, Pipeline]
+    scene_configs: dict[str, SceneConfig] | None
+    visual_grounder: dict[str, VisualGrounder] | None
+    pipeline: dict[str, Pipeline] | None
     captioner: BaseCaptioner
+    clip_model: CLIPModel
+    clip_processor: CLIPProcessor
 
 
 class ModelContextManager:
@@ -49,8 +52,8 @@ class ModelContextManager:
         # Add the project's root directory to sys.path
         sys.path.append(project_root)
 
-        logger.info("Search for all Scenes and Set the current Scene")
-        scene_configs = ModelContextManager.search_scenes(Settings.data_path)
+        # logger.info("Search for all Scenes and Set the current Scene")
+        # scene_configs = ModelContextManager.search_scenes(Settings.data_path)
 
         logger.info("Initialize Captioner")
         if Settings.TYPE_CAPTIONER == "blip2":
@@ -59,24 +62,9 @@ class ModelContextManager:
         else:
             captioner = ModelContextManager.initiaze_llava_captioner()
 
-        logger.info("Initialize LERF pipelines and visualGrounder for all scenes")
-        pipeline = {}
-        visual_grounder_ins = {}
-        initial_dir = os.getcwd()
-        for scene_name, scene_config in scene_configs.items():
-            # LERF's implementation requires to find output directory
-            os.chdir(Settings.data_path + "/" + scene_name)
-            lerf_pipeline = ModelContextManager.initialize_lerf_pipeline(
-                scene_config.load_lerf_config
-            )
-            pipeline[scene_name] = lerf_pipeline
-            visual_grounder_ins[scene_name] = VisualGrounder(
-                Settings.output_path, scene_config.camera_poses, lerf_pipeline
-            )
-
-        # move back the current directory
-        os.chdir(initial_dir)
-        return ModelContext(scene_configs, visual_grounder_ins, pipeline, captioner)
+        clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
+        clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
+        return ModelContext(None, None, None, captioner, clip_model, clip_processor)
 
     @staticmethod
     def search_scenes(path: str) -> dict[str, SceneConfig]:
@@ -157,11 +145,9 @@ class ModelContextManager:
         captioner = LLaVaCaptioner(
             model,
             image_processor,
-            Factory(list),
             tokenizer,
             mm_use_im_start_end,
             image_token_len,
-            "computer",
         )
         return captioner
 

@@ -156,9 +156,12 @@ def act(
                 target=ground_with_callback,
                 args=(
                     session.session_id,
+                    dropdown_scene,
                     ground_text,
-                    model_context.visual_grounder[dropdown_scene],
+                    None,
                     model_context.captioner,
+                    model_context.clip_model,
+                    model_context.clip_processor,
                     grounding_callback,
                 ),
             ).start()
