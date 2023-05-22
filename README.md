@@ -17,6 +17,7 @@
 ## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
 
 ## :label: TODO
+- [ ] A faster process to determine camera poses and rendering pictures. See discussion [here](https://github.com/sled-group/chat-with-nerf/issues/15#issuecomment-1556223848).
 - [ ] Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
 
 ## :hammer_and_wrench: Install
