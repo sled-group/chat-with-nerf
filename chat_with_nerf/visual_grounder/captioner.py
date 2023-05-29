@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 import torch
-from attrs import Factory, define
+from attrs import define
 from llava.conversation import SeparatorStyle, conv_templates
 from llava.model import *  # noqa: F401, F403
 from llava.model.utils import KeywordsStoppingCriteria
@@ -23,14 +23,14 @@ class BaseCaptioner:
         raw_image = Image.open(image_path).convert("RGB")
         return self.vis_processors["eval"](raw_image).unsqueeze(0).to(self.model.device)
 
-    def caption(self):
+    def caption(self, positive_words: str, imagerefs: list[ImageRef]):
         """Generates captions for the images."""
         pass
 
 
 @define
 class Blip2Captioner(BaseCaptioner):
-    def caption(self, positive_words) -> dict[str, str]:
+    def caption(self, positive_words: str, imagerefs: list[ImageRef]) -> dict[str, str]:
         """_summary_
 
         :return: a dictionary of image path and its corresponding caption
@@ -39,7 +39,7 @@ class Blip2Captioner(BaseCaptioner):
         # TODO: batch it.
         # prepare the image
         result: dict[str, str] = {}  # key: rgb_address, value: caption
-        for image_ref in self.images:
+        for image_ref in imagerefs:
             image = self.process_image(image_ref.raw_image)  # type: ignore
             question = (
                 "Describe the shape and material of the"
@@ -80,6 +80,7 @@ class LLaVaCaptioner(BaseCaptioner):
 
         selected = []
         for imageref in imagerefs:
+            assert imageref.rgb_image is not None
             output = self.llava_output(qs, imageref.rgb_image)
             print("output: ", output)
             if output == "yes":
@@ -117,11 +118,12 @@ class LLaVaCaptioner(BaseCaptioner):
         result: dict[str, str] = {}  # key: rgb_address, value: caption
         for image_ref in imagerefs:
             image = image_ref.rgb_image
+            assert image is not None
             outputs = self.llava_output(qs, image)
             result[image_ref.rgb_address] = outputs
         return result
 
-    def llava_output(self, qs: str, image: Image):
+    def llava_output(self, qs: str, image: Image.Image):
         conv_mode = "multimodal"
         conv = conv_templates[conv_mode].copy()
         conv.append_message(conv.roles[0], qs)

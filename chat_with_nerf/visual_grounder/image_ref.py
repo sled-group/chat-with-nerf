@@ -1,6 +1,5 @@
 from typing import Optional
 
-import numpy as np
 from attrs import define
 from PIL.Image import Image
 

@@ -1,10 +1,10 @@
 class Settings:
     data_path: str = "/workspace/chat-with-nerf/data"
     output_path: str = "/workspace/chat-with-nerf/session_output"
-    CLIP_FILTERING_THRESHOLD: float = 20  # range is (0, 100)
+    CLIP_FILTERING_THRESHOLD: float = 21  # range is (0, 100)
     default_scene: str = "office"
     INITIAL_MSG_FOR_DISPLAY = "Hello there! What can I help you find in this room?"
-    MAX_TURNS = 8
+    MAX_TURNS = 10
     USE_FAKE_GROUNDER: bool = False
     TYPE_CAPTIONER = "llava"
     LLAVA_PATH = "/workspace/pre-trained-weights/LLaVA/LLaVA-13B-v0"

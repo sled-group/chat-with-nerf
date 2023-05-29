@@ -13,10 +13,8 @@ from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def call_visual_grounder(
-    session_id: str,
     dropdown_scene: str,
     positive_words: str,
-    visual_grounder: VisualGrounder,
     captioner: BaseCaptioner,
     clip_model: CLIPModel,
     clip_processor: CLIPProcessor,
@@ -72,7 +70,7 @@ def filter(
     processor: CLIPProcessor,
     positive_words: str,
 ) -> list:
-    top = None
+    top: ImageRef
     top_clip_score = 0
     selected = []
     for imageref in imagerefs:

@@ -3,17 +3,15 @@ from typing import Callable
 from transformers import CLIPModel, CLIPProcessor
 
 from chat_with_nerf import logger
+from chat_with_nerf.chat.session import Session
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.captioner import BaseCaptioner
 from chat_with_nerf.visual_grounder.main import call_visual_grounder
-from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def ground(
-    session_id: str,
     dropdown_scene: str,
     ground_text: str,
-    visual_grounder: VisualGrounder | None,
     captioner: BaseCaptioner,
     clip_model: CLIPModel,
     clip_processor: CLIPProcessor,
@@ -45,10 +43,8 @@ def ground(
     logger.info(f"Ground Text: {ground_text}")
 
     response = call_visual_grounder(
-        session_id,
         dropdown_scene,
         ground_text,
-        visual_grounder,
         captioner,
         clip_model,
         clip_processor,
@@ -63,22 +59,19 @@ def ground(
 
 
 def ground_with_callback(
-    session_id: str,
+    session: Session,
     dropdown_scene: str,
     ground_text: str,
-    visual_grounder: VisualGrounder | None,
     captioner: BaseCaptioner,
     clip_model: CLIPModel,
     clip_processor: CLIPProcessor,
-    callback: Callable[[list[tuple[str, str]]], None],
+    callback: Callable[[list[tuple[str, str]], Session], None],
 ):
     result = ground(
-        session_id,
         dropdown_scene,
         ground_text,
-        visual_grounder,
         captioner,
         clip_model,
         clip_processor,
     )
-    callback(result)
+    callback(result, session)

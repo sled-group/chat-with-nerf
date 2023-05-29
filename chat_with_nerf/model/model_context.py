@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 import yaml
-from attrs import Factory, define
+from attrs import define
 
 # from lavis.models import load_model_and_preprocess  # type: ignore
 from llava import LlavaLlamaForCausalLM

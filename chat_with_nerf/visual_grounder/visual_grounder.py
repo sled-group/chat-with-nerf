@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""Visual Grounder."""
 from __future__ import annotations
 
 import datetime
@@ -11,11 +9,11 @@ import mediapy as media
 import numpy as np
 import torch
 from attrs import define
+from lerf.lerf_pipeline import LERFPipeline
 from nerfstudio.cameras.camera_paths import get_path_from_json
 from nerfstudio.cameras.cameras import Cameras, CameraType
 from nerfstudio.data.scene_box import SceneBox
 from nerfstudio.model_components import renderers
-from nerfstudio.pipelines.base_pipeline import Pipeline
 from nerfstudio.utils import install_checks
 from rich.console import Console
 
@@ -32,7 +30,7 @@ class VisualGrounder:
     """Output path."""
     camera_poses: dict
     """Determined camera poses."""
-    lerf_pipeline: Pipeline | None
+    lerf_pipeline: LERFPipeline
     """LERF pipeline."""
     downscale_factor: float = 1
     """Scaling factor to apply to the camera image resolution."""
@@ -178,7 +176,7 @@ class VisualGrounder:
             numpy_result[clip] = str(clip_image_dir / clip_file)
             np.save(clip_image_dir / clip_file, relevancy0)
 
-            imageRef = ImageRef(camera_idx, result[clip], result[rgb], relevancy0)
+            imageRef = ImageRef(camera_idx, result[clip], result[rgb], relevancy0)  # type: ignore
             return_result.append(imageRef)
 
         CONSOLE.print("[bold green]Finish taking 6 images... ")
