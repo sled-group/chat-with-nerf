@@ -40,35 +40,6 @@ class BaseCaptioner:
 
 
 @define
-class Blip2Captioner(BaseCaptioner):
-    positive_words: str = "computer"
-
-    def set_positive_words(self, new_positive_words):
-        self.positive_words = new_positive_words
-
-    def caption(self) -> dict[str, str]:
-        """_summary_
-
-        :return: a dictionary of image path and its corresponding caption
-        :rtype: dict[str, str]
-        """
-        # TODO: batch it.
-        # prepare the image
-        result: dict[str, str] = {}  # key: rgb_address, value: caption
-        for image_ref in self.images:
-            image = self.process_image(image_ref.raw_image)  # type: ignore
-            question = (
-                "Describe the shape and material of the"
-                + self.positive_words
-                + ", if there is one."
-            )
-            answer = self.model.generate({"image": image, "prompt": question})[0]  # type: ignore
-            result[image_ref.rgb_address] = answer
-
-        return result
-
-
-@define
 class LLaVaCaptioner(BaseCaptioner):
     tokenizer: Optional[Any] = None
     mm_use_im_start_end: bool = True

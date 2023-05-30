@@ -157,7 +157,7 @@ def act(
                 args=(
                     session.session_id,
                     ground_text,
-                    model_context.visual_grounder[dropdown_scene],
+                    model_context.picture_taker[dropdown_scene],
                     model_context.captioner,
                     grounding_callback,
                 ),

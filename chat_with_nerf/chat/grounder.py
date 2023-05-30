@@ -3,14 +3,14 @@ from typing import Callable
 from chat_with_nerf import logger
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.captioner import BaseCaptioner
-from chat_with_nerf.visual_grounder.main import call_visual_grounder
+from chat_with_nerf.visual_grounder.picture_taker import PictureTaker
 from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def ground(
     session_id: str,
     ground_text: str,
-    visual_grounder: VisualGrounder,
+    picture_taker: PictureTaker,
     captioner: BaseCaptioner,
 ) -> list[tuple[str, str]]:
     """Ground a text in a scene by returning the relavant images and their
@@ -39,7 +39,9 @@ def ground(
 
     logger.info(f"Ground Text: {ground_text}")
 
-    response = call_visual_grounder(session_id, ground_text, visual_grounder, captioner)
+    response = VisualGrounder.call_visual_grounder(
+        session_id, ground_text, picture_taker, captioner
+    )
     result = []
     for img_path, img_caption in response.items():
         # Gradio uses http://localhost:7777/file=/absolute/path/example.jpg to access files,
@@ -52,14 +54,14 @@ def ground(
 def ground_with_callback(
     session_id: str,
     ground_text: str,
-    visual_grounder: VisualGrounder,
+    picture_taker: PictureTaker,
     captioner: BaseCaptioner,
     callback: Callable[[list[tuple[str, str]]], None],
 ):
     result = ground(
         session_id,
         ground_text,
-        visual_grounder,
+        picture_taker,
         captioner,
     )
     callback(result)
