@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""Visual Grounder."""
 from __future__ import annotations
 
 from attrs import define
@@ -32,7 +30,7 @@ class VisualGrounder:
 
         image_refs = picture_taker.take_picture(positive_words, session_id)
 
-        captioner.load_images(image_refs)
-        captioner_result = captioner.caption()
+        # captioner.load_images(image_refs)
+        captioner_result = captioner.caption(positive_words, image_refs)
 
         return captioner_result

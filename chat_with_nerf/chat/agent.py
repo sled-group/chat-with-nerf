@@ -55,11 +55,30 @@ def act(
         session,
     )
 
-    retry_sleep_time = 1
+    retry_sleep_time = 0.5
     give_control_to_user = False
     for _ in range(MAX_ITERATION):  # iterate until GPT decides to give control to user
         if give_control_to_user:
             break
+
+        # exceed free tier limit
+        if session.chat_counter >= Settings.MAX_TURNS:
+            session.chat_history_for_display.append(
+                (
+                    None,
+                    (
+                        f"**SYSTEM: Maximum number of free trial turns ({Settings.MAX_TURNS}) "
+                        "reached. Ending dialog.**"
+                    ),
+                )
+            )
+            yield (
+                session.chat_history_for_display,
+                session.chat_counter,
+                None,
+                session,
+            )
+            return
 
         response: Response | None
         try:
@@ -81,14 +100,49 @@ def act(
                 # sometimes GPT returns an empty response because there were too many requests
                 # in this case we don't change the chat_history_for_llm, simply re-issue the request
                 if response and response.status_code == 429:
-                    msg = "The chat agent is overloaded with too many requests."
-                    logger.error(msg)
-                    raise ValueError(msg)
+                    time.sleep(retry_sleep_time)
+                    retry_sleep_time *= 2  # exponential backoff
+                    continue
         except ValueError:
             # sometimes GPT returns "The server is currently overloaded with other requests."
             # no need to modify the chat_history_for_llm in this case, simply re-issue the request
-            session.chat_history_for_display.append(
-                (None, "SYSTEM: There was a network issue. Retrying...")
+            time.sleep(retry_sleep_time)
+            retry_sleep_time *= 2  # exponential backoff
+            yield (
+                session.chat_history_for_display,
+                session.chat_counter,
+                get_status_code_and_reason(response),
+                session,
+            )
+            continue
+
+        # done streaming
+        try:
+            gpt_response_json = json.loads(session.chat_history_for_llm[-1][1])
+        except json.decoder.JSONDecodeError as e:
+            # if reaches here, then it means GPT-4 indeed returned a non-JSON response
+            logger.error(
+                f"Cannot decode GPT response: {session.chat_history_for_llm[-1][1]}. "
+                "Asking GPT to retry."
+            )
+            # need to modify the chat_history_for_llm in this case
+            # so that the LLM knows it has made a mistake
+            inputs = (
+                "SYSTEM: The above response caused an error: "
+                f"type: {type(e)}, msg: {str(e)}. Please retry."
+            )
+            # GPT often returns an empty response and causing a JSONDecodeError
+            # because there were too many requests,
+            # so add some sleep here to avoid spamming GPT
+            time.sleep(retry_sleep_time)
+            retry_sleep_time *= 2  # exponential backoff
+            continue
+
+        try:
+            beautified_response_markdown = beautify_gpt_response(gpt_response_json)
+            session.chat_history_for_display[-1] = (
+                session.chat_history_for_display[-1][0],
+                beautified_response_markdown,
             )
             yield (
                 session.chat_history_for_display,
@@ -96,115 +150,127 @@ def act(
                 get_status_code_and_reason(response),
                 session,
             )
-            time.sleep(retry_sleep_time)
-            retry_sleep_time *= 2  # exponential backoff
-            continue
 
-        # done streaming
-        try:
-            gpt_response_json = json.loads(session.chat_history_for_llm[-1][1])
-        except json.decoder.JSONDecodeError:
-            # if reaches here, then it means GPT-4 indeed returned a non-JSON response
-            logger.error(
-                f"Cannot decode GPT response: {session.chat_history_for_llm[-1][1]}"
-            )
-            # need to modify the chat_history_for_llm in this case
-            # so that the LLM knows it has made a mistake
-            inputs = (
-                "SYSTEM: The above response caused an error: json.decoder.JSONDecodeError. "
-                "Retrying..."
-            )
-            continue
-
-        beautified_response_markdown = beautify_gpt_response(gpt_response_json)
-        session.chat_history_for_display[-1] = (
-            session.chat_history_for_display[-1][0],
-            beautified_response_markdown,
-        )
-        yield (
-            session.chat_history_for_display,
-            session.chat_counter,
-            get_status_code_and_reason(response),
-            session,
-        )
-
-        # controller logic to decide what to do next
-        if gpt_response_json["command"]["name"] == "user_dialog":
-            sentence_to_user = gpt_response_json["command"]["args"]["sentence_to_user"]
-            session.chat_history_for_display.append(
-                (None, sentence_to_user)
-            )  # use none as user input to display system message only
-            give_control_to_user = True
-        elif gpt_response_json["command"]["name"] == "ground":
-            ground_text = gpt_response_json["command"]["args"]["ground_text"]
-
-            # use a separate thread to do grounding since it takes a while
-            grounder_returned_chatbot_msg = None
-
-            def grounding_callback(grounder_results: list[tuple[str, str]]) -> None:
-                # this function is called when the grounder finishes
-                nonlocal grounder_returned_chatbot_msg, inputs, give_control_to_user
-                chatbot_msg_for_user, pure_text_for_gpt = display_grounder_results(
-                    grounder_results
-                )
-                inputs = pure_text_for_gpt
-                give_control_to_user = False
-                # this must be last line to ensure thread safety
-                grounder_returned_chatbot_msg = chatbot_msg_for_user
-
-            threading.Thread(
-                target=ground_with_callback,
-                args=(
-                    session.session_id,
-                    ground_text,
-                    model_context.picture_taker[dropdown_scene],
-                    model_context.captioner,
-                    grounding_callback,
-                ),
-            ).start()
-
-            # while grounder is running, display a loading message
-            dot_counter = 0
-            first_iteration = True
-            while grounder_returned_chatbot_msg is None:
-                dot_counter = (dot_counter + 1) % 4
-                dots = "." * dot_counter
-                if first_iteration:
-                    session.chat_history_for_display.append(
-                        (None, f"SYSTEM: I'm thinking{dots}")
-                    )
-                    first_iteration = False
-                else:
-                    session.chat_history_for_display[-1] = (
+            # controller logic to decide what to do next
+            if gpt_response_json["command"]["name"] == "user_dialog":
+                sentence_to_user = gpt_response_json["command"]["args"][
+                    "sentence_to_user"
+                ]
+                session.chat_history_for_display.append(
+                    (None, sentence_to_user)
+                )  # use none as user input to display system message only
+                give_control_to_user = True
+            elif gpt_response_json["command"]["name"] == "ground":
+                # first display what GPT wants to tell the user
+                session.chat_history_for_display.append(
+                    (
                         None,
-                        f"SYSTEM: I'm thinking{dots}",
+                        gpt_response_json["thoughts"]["speak"],
                     )
+                )
                 yield (
                     session.chat_history_for_display,
                     session.chat_counter,
                     get_status_code_and_reason(response),
                     session,
                 )
-                time.sleep(0.5)  # Adjust the sleep duration as needed
 
-            session.chat_history_for_display.extend(grounder_returned_chatbot_msg)
+                # now start the grounding process
+                ground_text = gpt_response_json["command"]["args"]["ground_text"]
 
-        elif gpt_response_json["command"]["name"] == "finish_grounding":
-            image_id = gpt_response_json["command"]["args"]["image_id"]
-            session.chat_history_for_display.append(
-                (None, f"SYSTEM: Grounding finished. Image id: {image_id}")
+                # use a separate thread to do grounding since it takes a while
+                grounder_returned_chatbot_msg = None
+
+                def grounding_callback(
+                    grounder_results: list[tuple[str, str]], session: Session
+                ) -> None:
+                    # this function is called when the grounder finishes
+                    nonlocal grounder_returned_chatbot_msg, inputs, give_control_to_user
+                    chatbot_msg_for_user, pure_text_for_gpt = display_grounder_results(
+                        grounder_results, session
+                    )
+                    inputs = pure_text_for_gpt
+                    give_control_to_user = False
+                    # this must be last line to ensure thread safety
+                    grounder_returned_chatbot_msg = chatbot_msg_for_user
+
+                threading.Thread(
+                    target=ground_with_callback,
+                    args=(
+                        session,
+                        dropdown_scene,
+                        ground_text,
+                        model_context.picture_takers[dropdown_scene],
+                        model_context.captioner,
+                        grounding_callback,
+                    ),
+                ).start()
+
+                # while grounder is running, display a loading message
+                dot_counter = 0
+                first_iteration = True
+                while grounder_returned_chatbot_msg is None:
+                    dot_counter = (dot_counter + 1) % 4
+                    dots = "." * dot_counter
+                    if first_iteration:
+                        session.chat_history_for_display.append(
+                            (None, f"**SYSTEM: I'm thinking{dots}**")
+                        )
+                        first_iteration = False
+                    else:
+                        session.chat_history_for_display[-1] = (
+                            None,
+                            f"**SYSTEM: I'm thinking{dots}**",
+                        )
+                    yield (
+                        session.chat_history_for_display,
+                        session.chat_counter,
+                        get_status_code_and_reason(response),
+                        session,
+                    )
+                    time.sleep(0.5)  # Adjust the sleep duration as needed
+
+                session.chat_history_for_display.extend(grounder_returned_chatbot_msg)
+
+            elif gpt_response_json["command"]["name"] == "finish_grounding":
+                image_ids = gpt_response_json["command"]["args"]["image_id"]
+                logger.debug(f"session.image_id_to_path: {session.image_id_to_path}")
+                img_id_list = [int(i) for i in image_ids.split(", ")]
+
+                markdown_to_display = (
+                    f"**SYSTEM: Grounding finished. Image id: {image_ids}** <br>"
+                )
+
+                for img_id in img_id_list:
+                    markdown_to_display += (
+                        f"![caption](file={session.image_id_to_path[img_id]})"
+                    )
+                session.chat_history_for_display.append((None, markdown_to_display))
+                give_control_to_user = True
+            elif gpt_response_json["command"]["name"] == "end_dialog":
+                session.chat_history_for_display.append(
+                    (None, "**SYSTEM: End of dialog**")
+                )
+                give_control_to_user = True
+
+            yield (
+                session.chat_history_for_display,
+                session.chat_counter,
+                get_status_code_and_reason(response),
+                session,
             )
-            give_control_to_user = True
-        elif gpt_response_json["command"]["name"] == "end_dialog":
-            session.chat_history_for_display.append((None, "SYSTEM: End of dialog"))
-            give_control_to_user = True
 
-        yield (
-            session.chat_history_for_display,
-            session.chat_counter,
-            get_status_code_and_reason(response),
-            session,
-        )
+        except Exception as e:
+            logger.error(
+                f"An error occured: type: {type(e)}, msg: {str(e)}. Asking GPT to retry."
+            )
+            # need to modify the chat_history_for_llm in this case
+            # so that the LLM knows it has made a mistake
+            inputs = (
+                "SYSTEM: The above response caused an error: "
+                f"type: {type(e)}, msg: {str(e)}. Please retry."
+            )
+            continue
 
     # update and save session state
     session.save()
@@ -217,16 +283,20 @@ def act(
 
 
 def display_grounder_results(
-    grounder_results: list[tuple[str, str]]
+    grounder_results: list[tuple[str, str]],
+    session: Session,
 ) -> tuple[list[tuple[None, str]], str]:
     """Display grounder results in markdown format."""
     str_for_user = ""
     pure_text_for_gpt = ""
     for i, (img_path, caption) in enumerate(grounder_results):
-        str_for_user += f"Image {i+1}: {caption}\n ![caption](file={img_path})\n"
+        str_for_user += f"Image {i+1}: {caption}\n ![{caption}](file={img_path})\n"
         pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
+        # record the image_id to image path mapping in session
+        session.image_id_to_path[i + 1] = img_path
     logger.info(f"pure_text_for_gpt: {pure_text_for_gpt}")
     chatbot_msg_for_user = [(None, str_for_user)]
+
     return chatbot_msg_for_user, pure_text_for_gpt
 
 
@@ -237,16 +307,6 @@ def ask_gpt(
     temperature: float,
     session: Session,
 ) -> Generator[tuple[Session, Response | None], None, None]:
-    if session.chat_counter >= Settings.MAX_TURNS:
-        session.chat_history_for_display.append(
-            (
-                None,
-                f"SYSTEM: Maximum number of turns ({Settings.MAX_TURNS}) reached. Ending dialog.",
-            )
-        )
-        yield session, None
-        return
-
     headers = {
         "Content-Type": "application/json",
         "api-key": OPENAI_API_KEY,
@@ -371,10 +431,10 @@ def beautify_gpt_response(gpt_response_json) -> str:
         f"- Reasoning:\n {gpt_response_json['thoughts']['reasoning']}\n\n"
     )
     beautified_response_markdown += (
-        f"- Plan:\n {gpt_response_json['thoughts']['reasoning']}\n\n"
+        f"- Plan:\n {gpt_response_json['thoughts']['plan']}\n\n"
     )
     beautified_response_markdown += (
-        f"- Criticism:\n {gpt_response_json['thoughts']['criticism']}\n\n"
+        f"- Self-critique:\n {gpt_response_json['thoughts']['self-critique']}\n\n"
     )
     beautified_response_markdown += (
         f"- Speak:\n {gpt_response_json['thoughts']['speak']}\n\n"

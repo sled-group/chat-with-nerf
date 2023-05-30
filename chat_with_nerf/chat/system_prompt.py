@@ -21,7 +21,7 @@ RESPONSE FORMAT:
         "observation": "observation",
         "reasoning": "reasoning",
         "plan": "- short bulleted\t- list that conveys\t- long-term plan",
-        "criticism": "constructive self-criticism",
+        "self-critique": "constructive self-critique",
         "speak": "thoughts summary to say to user"
     },
     "command": {

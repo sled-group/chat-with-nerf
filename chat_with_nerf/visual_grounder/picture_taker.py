@@ -77,7 +77,7 @@ class PictureTaker:
         result[rgb] = str(rgb_image_dir) + "/" + rgb_filename
         media.write_image(result[rgb], output_image)
 
-        imageRef = ImageRef(camera_idx, result[rgb], None)
+        imageRef = ImageRef(result[rgb], output_image)
 
         return imageRef
 

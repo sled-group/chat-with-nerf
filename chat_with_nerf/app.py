@@ -47,7 +47,23 @@ def change_scene(
     )
 
 
-title = """<h1 align="center">🔥Chat with NeRF using GPT-4🚀</h1>"""
+title = """<h1 align="center">🔥 Chat with NeRF using GPT-4 🚀</h1>
+<p><center>
+<a href="https://chat-with-nerf.github.io/" target="_blank">[Project Page]</a>
+<a href="https://github.com/sled-group/chat-with-nerf" target="_blank">[Code]</a>
+</center></p>
+<div style="background-color:yellow;color:white;padding:2%;">
+    <center><strong style="color:black;">
+        👋🏻 Note: Sometimes system response might be slow due to popularity of the GPT-4 API.
+    </strong></center>
+    <center><strong style="color:black;">
+        If you encounter the error message "maximum number of free
+        trial turns reached", please refresh the page and retry.
+        We appreciate your understanding and patience! 🙏
+    </strong></center>
+</div>
+
+"""
 
 
 # Using info to add additional information about System message in GPT4
@@ -70,6 +86,7 @@ theme = gr.themes.Soft(
 with gr.Blocks() as demo:
     gr.HTML(title)
 
+    session_state = gr.State(Session.create)
     with gr.Column():
         with gr.Row():
             with gr.Column(scale=5):
@@ -103,13 +120,20 @@ with gr.Blocks() as demo:
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="3D Model",
                 )
+                gr.HTML(
+                    """<center><strong>
+                    👆 To see the scene better, scroll/drag on the 3D Model
+                    to zoom in/out and rotate.
+                    </strong></center>
+                    """
+                )
             with gr.Column(scale=5):
                 chat_history_for_display = gr.Chatbot(
                     value=[(None, Settings.INITIAL_MSG_FOR_DISPLAY)],
                     label="Chat Assistant",
-                ).style(height="600")
+                ).style(height="550")
                 with gr.Row():
-                    with gr.Column(scale=9):
+                    with gr.Column(scale=8):
                         user_chat_input = gr.Textbox(
                             placeholder="I want to find a cutting board",
                             show_label=False,
@@ -118,20 +142,21 @@ with gr.Blocks() as demo:
                         send_button = gr.Button("Send", variant="primary").style(
                             full_width=True
                         )
-                clear_button = gr.Button("Clear").style(full_width=True)
-        session_state = gr.State(Session.create)
+                    with gr.Column(scale=1, min_width=0):
+                        clear_button = gr.Button("Clear").style(full_width=True)
+                with gr.Row():
+                    # Examples
+                    with gr.Accordion(label="Examples for user message:", open=True):
+                        gr.Examples(
+                            examples=[
+                                ["a white plate on a red square-shaped cutting board"],
+                                ["I want to sit down."],
+                                ["Can I get something to drink?"],
+                                ["I am hungry, can you find me something to eat?"],
+                            ],
+                            inputs=user_chat_input,
+                        )
 
-        # Examples
-        with gr.Accordion(label="Examples for user message:", open=True):
-            gr.Examples(
-                examples=[
-                    ["a monitor"],
-                    ["I want to sit down."],
-                    ["Can I get something to drink?"],
-                    ["Find a table."],
-                ],
-                inputs=user_chat_input,
-            )
         with gr.Accordion(label="System instruction:", open=False, visible=False):
             system_msg = gr.Textbox(
                 label="Instruct the AI Assistant to set its beaviour",
@@ -143,7 +168,7 @@ with gr.Blocks() as demo:
                 visible=False,
             )
         # top_p, temperature
-        with gr.Accordion("Parameters", open=False):
+        with gr.Accordion("Parameters", open=False, visible=False):
             top_p = gr.Slider(
                 minimum=-0,
                 maximum=1.0,
@@ -160,6 +185,12 @@ with gr.Blocks() as demo:
                 interactive=True,
                 label="Temperature",
             )
+    gr.Markdown("### Terms of Service")
+    gr.HTML(
+        """By using this service, users are required to agree to the following terms:
+The service is a research preview intended for non-commercial use only.
+The service may collect user dialogue data for future research."""
+    )
 
     # Event handling
     dropdown_scene.change(
@@ -235,10 +266,14 @@ for x in range(1, 8):  # try 8 times
         # put your logic here
         gr.close_all()
         demo.queue(
-            max_size=99,
-            concurrency_count=20,
+            max_size=20,
+            concurrency_count=3,
             api_open=False,
-        ).launch(debug=True, server_name="0.0.0.0", server_port=port)
+        ).launch(
+            debug=True,
+            server_name="0.0.0.0",
+            server_port=port,
+        )
     except OSError:
         for proc in process_iter():
             for conns in proc.connections(kind="inet"):

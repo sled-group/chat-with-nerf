@@ -5,7 +5,7 @@ from typing import Optional
 
 import torch
 import yaml
-from attrs import Factory, define
+from attrs import define
 
 # from lavis.models import load_model_and_preprocess  # type: ignore
 from llava import LlavaLlamaForCausalLM
@@ -28,7 +28,7 @@ from chat_with_nerf.visual_grounder.picture_taker import (
 @define
 class ModelContext:
     scene_configs: dict[str, SceneConfig]
-    picture_taker: dict[str, PictureTaker]
+    picture_takers: dict[str, PictureTaker]
     captioner: BaseCaptioner
 
 
@@ -131,10 +131,8 @@ class ModelContextManager:
         captioner = LLaVaCaptioner(
             model,
             image_processor,
-            Factory(list),
             tokenizer,
             mm_use_im_start_end,
             image_token_len,
-            "computer",
         )
         return captioner

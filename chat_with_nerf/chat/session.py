@@ -4,7 +4,7 @@ import os
 import uuid
 
 import cattrs
-from attrs import define
+from attrs import define, field
 
 from chat_with_nerf import logger
 from chat_with_nerf.settings import Settings
@@ -21,6 +21,7 @@ class Session:
     chat_history_for_llm: list[tuple]
     chat_history_for_display: list[tuple]
     chat_counter: int
+    image_id_to_path: dict[int, str] = field(factory=dict)
 
     @classmethod
     def create(cls):
