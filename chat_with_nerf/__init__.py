@@ -63,6 +63,7 @@ logging_dict_config = {
     },
     "loggers": {
         "chat_with_nerf": {"level": "DEBUG"},
+        "httpx": {"level": "WARNING"},
     },
 }
 

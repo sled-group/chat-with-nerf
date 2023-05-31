@@ -1,7 +1,5 @@
 from typing import Callable
 
-from transformers import CLIPModel, CLIPProcessor
-
 from chat_with_nerf import logger
 from chat_with_nerf.chat.session import Session
 from chat_with_nerf.settings import Settings

@@ -1,27 +1,29 @@
-import os
-import h5py
-import torch
-import numpy as np
-from pathlib import Path
-from attrs import define
-import open_clip
 import datetime
-import mediapy as media
-from torch import Tensor
-from typing import Iterator, Optional
-from sklearn.cluster import DBSCAN
+import os
+from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
-from transformers import AutoTokenizer, CLIPVisionModel
+from pathlib import Path
+from typing import Optional
 
-from chat_with_nerf import logger
-from nerfstudio.utils import install_checks
-from chat_with_nerf.settings import Settings
-from nerfstudio.pipelines.base_pipeline import Pipeline
+import h5py
+import mediapy as media
+import numpy as np
+import open_clip
+import torch
+from attrs import define
 from nerfstudio.cameras.camera_paths import get_path_from_json
+from nerfstudio.pipelines.base_pipeline import Pipeline
+from nerfstudio.utils import install_checks
 
 # from nerfstudio.cameras.cameras import CameraType
 from nerfstudio.utils.eval_utils import eval_setup
+from sklearn.cluster import DBSCAN
+from torch import Tensor
+from transformers import AutoTokenizer, CLIPVisionModel
+
+from chat_with_nerf import logger
 from chat_with_nerf.model.scene_config import SceneConfig
+from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.camera_pose import CameraPose
 from chat_with_nerf.visual_grounder.image_ref import ImageRef
 
@@ -58,7 +60,9 @@ class PictureTaker:
             camera_indices=camera_idx, aabb_box=aabb_box
         )
         with torch.no_grad():
-            outputs = lerf_pipeline.model.get_rgb_picture_taking(camera_ray_bundle)
+            outputs = lerf_pipeline.model.get_outputs_for_camera_ray_bundle(
+                camera_ray_bundle.to(lerf_pipeline.device)
+            )
 
         output_image = outputs["rgb"].cpu().numpy()
         print(output_image.shape)
@@ -101,11 +105,11 @@ class PictureTaker:
             ).to("cuda")
             for i in range(n_phrases):
                 probs = self.get_relevancy(
-                    clip_output,
-                    i,
-                    pos_embeds,
-                    self.neg_embeds,
-                    self.negative_words_length,
+                    embed=clip_output,
+                    positive_id=i,
+                    pos_embeds=pos_embeds,
+                    neg_embeds=self.neg_embeds,
+                    positive_words_length=1,
                 )
                 pos_prob = probs[..., 0:1]
                 if (
@@ -153,7 +157,9 @@ class PictureTaker:
             for centroid in centroids
         ]
         camera_pose_instance = CameraPose()
-        camera_poses = camera_pose_instance.construct_camera_pose(c2w_list)
+        camera_poses = [
+            camera_pose_instance.construct_camera_pose(c2w) for c2w in c2w_list
+        ]
 
         lerf_pipelines = [self.lerf_pipeline] * len(camera_poses)
         session_id_list = [session_id] * len(camera_poses)
@@ -162,13 +168,13 @@ class PictureTaker:
         # see https://stackoverflow.com/a/70003564
         with self.thread_pool_executor as exe:
             picture_paths: Iterator[ImageRef] = exe.map(
-                fn=PictureTaker.render_picture,
-                iterables=[
+                lambda tup: PictureTaker.render_picture(*tup),
+                (
                     (lerf_pipeline, camera_pose, session_id)
                     for lerf_pipeline, camera_pose, session_id in zip(
                         lerf_pipelines, camera_poses, session_id_list
                     )
-                ],
+                ),
             )
 
         return list(picture_paths)
@@ -202,7 +208,8 @@ class PictureTaker:
         )[:, 0, :]
 
     def compute_camera_to_world_matrix(self, point: np.ndarray, k: float) -> np.ndarray:
-        direction = point / np.linalg.norm(point)
+        direction = point - np.array([0, 0.2, 0])
+        direction = direction / np.linalg.norm(direction)
 
         camera_position = point - (k * direction)
 
@@ -260,7 +267,7 @@ class PictureTakerFactory:
 
         for scene_name, scene_config in scene_configs.items():
             lerf_pipeline = PictureTakerFactory.initialize_lerf_pipeline(
-                scene_config.scene_name, scene_name
+                scene_config.load_lerf_config, scene_name
             )
             h5_dict = PictureTakerFactory.load_h5_file(scene_config.load_h5_config)
             thread_pool_executor = ThreadPoolExecutor(max_workers=Settings.MAX_WORKERS)

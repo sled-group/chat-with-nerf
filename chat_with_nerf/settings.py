@@ -2,7 +2,7 @@ class Settings:
     data_path: str = "/workspace/chat-with-nerf/data"
     output_path: str = "/workspace/chat-with-nerf/session_output"
     CLIP_FILTERING_THRESHOLD: float = 21  # range is (0, 100)
-    default_scene: str = "office"
+    default_scene: str = "home_1"
     INITIAL_MSG_FOR_DISPLAY = "Hello there! What can I help you find in this room?"
     MAX_TURNS = 10
     USE_FAKE_GROUNDER: bool = False

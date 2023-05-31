@@ -111,12 +111,12 @@ with gr.Blocks() as demo:
                 # GPT4 API Key is provided by Huggingface
                 dropdown_scene = gr.Dropdown(
                     choices=list_dirs(Settings.data_path),
-                    value="office",
+                    value="home_1",
                     interactive=True,
                     label="Select a scene",
                 )
                 model_3d = gr.Model3D(
-                    value=Settings.data_path + "/office" + "/poly.glb",
+                    value=Settings.data_path + "/home_1" + "/poly.glb",
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="3D Model",
                 )
