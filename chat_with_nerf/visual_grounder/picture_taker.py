@@ -10,6 +10,7 @@ import mediapy as media
 import numpy as np
 import open_clip
 import torch
+import trimesh
 from attrs import define
 from nerfstudio.cameras.camera_paths import get_path_from_json
 from nerfstudio.pipelines.base_pipeline import Pipeline
@@ -118,15 +119,48 @@ class PictureTaker:
                 ):
                     n_phrases_maxs[i] = scale
                     n_phrases_sims[i] = pos_prob
+
         possibility_array = n_phrases_sims[0].detach().cpu().numpy()  # type: ignore
         num_points = possibility_array.shape[0]
         percentage_points = int(num_points * 0.005)
         flattened_values = possibility_array.flatten()
 
-        # # Find the indices of the top 500 values
+        # # Find the indices of the top 5% values
         top_indices = np.argpartition(flattened_values, -percentage_points)[
             -percentage_points:
         ]
+        logger.info(
+            "Export RGB GLB files highlighted the top 5% values with color of red..."
+        )
+
+        points = self.h5_dict["points"]
+        colors = self.h5_dict["rgb"]
+
+        # Assuming you have the indices of the selected points
+        selected_indices = top_indices
+
+        # Set the color of selected points to red and make them fully opaque
+        red_color = np.tile(np.array([1.0, 0.0, 0.0]), (len(selected_indices), 1))
+        # opacity = 1.0  # Fully opaque
+        colors[selected_indices, :] = red_color
+
+        vertices = np.hstack((points, colors))
+        faces = np.arange(len(points)).reshape(-1, 1)
+        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
+        output_path = Settings.output_path + "/" + session_id + "/output.glb"
+        mesh.export(output_path, file_type="glb")
+
+        # pcd = o3d.geometry.PointCloud()
+
+        # # Set the points and colors
+        # pcd.points = o3d.utility.Vector3dVector(points)
+        # pcd.colors = o3d.utility.Vector3dVector(colors)
+
+        # # Save the point cloud as a PCD file
+        # output_path = Settings.output_path + "/" + session_id + "/output.pcd"
+        # o3d.io.write_point_cloud("output.pcd", pcd)
+
+        logger.info("Clustering...")
 
         # Retrieve the corresponding positions using the top indices
         top_positions = self.h5_dict["points"][top_indices]
