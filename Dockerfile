@@ -169,6 +169,7 @@ RUN git clone --branch xuweic_faster --single-branch --depth 1 https://github.co
 
 RUN git clone https://github.com/haotian-liu/LLaVA.git && \
     cd LLaVA && \
+    git checkout 8b21169 &&\
     python3.10 -m pip install -e . && \
     cd ..
 
