@@ -163,7 +163,7 @@ RUN git clone https://github.com/sled-group/nerfstudio_export.git && \
 # Install lerf dependencies.
 RUN git clone --branch xuweic_faster --single-branch --depth 1 https://github.com/sled-group/lerf_lite.git  && \
     cd lerf_lite && \
-    git checkout 9831552 &&\
+    git checkout fd4ea8d &&\
     python3.10 -m pip install -e . && \
     cd ..
 
