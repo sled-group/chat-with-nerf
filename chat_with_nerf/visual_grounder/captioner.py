@@ -1,7 +1,9 @@
+from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
 
 import torch
-from attrs import define
+from attrs import define, field
 from llava.conversation import SeparatorStyle, conv_templates
 from llava.model import *  # noqa: F401, F403
 from llava.model.utils import KeywordsStoppingCriteria
@@ -34,6 +36,9 @@ class LLaVaCaptioner(BaseCaptioner):
     tokenizer: Optional[Any] = None
     mm_use_im_start_end: bool = True
     image_token_len: int = 512
+    thread_pool_executor: ThreadPoolExecutor = field(
+        factory=lambda: ThreadPoolExecutor(max_workers=Settings.MAX_WORKERS)
+    )
 
     def filter(self, positive_words: str, imagerefs: list[ImageRef]) -> list:
         qs = (
@@ -91,13 +96,21 @@ class LLaVaCaptioner(BaseCaptioner):
             )
 
         result: dict[str, str] = {}  # key: rgb_address, value: caption
-        for image_ref in imagerefs:
-            image = image_ref.raw_image
-            outputs = self.llava_output(llava_prompt, image)
-            result[image_ref.rgb_address] = outputs
+
+        llava_prompts = [llava_prompt] * len(imagerefs)
+        captions: Iterator[str] = self.thread_pool_executor.map(
+            lambda tup: self.llava_output(*tup),
+            (
+                (prompt, imageref.raw_image)
+                for prompt, imageref in zip(llava_prompts, imagerefs)
+            ),
+        )
+        for imageref, caption in zip(imagerefs, list(captions)):
+            result[imageref.rgb_address] = caption
+
         return result
 
-    def llava_output(self, qs: str, image: Image.Image):
+    def llava_output(self, qs: str, image: Image.Image) -> str:
         conv_mode = "multimodal"
         conv = conv_templates[conv_mode].copy()
         conv.append_message(conv.roles[0], qs)

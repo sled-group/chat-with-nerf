@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import torch
 from attrs import define
 from rich.console import Console
 
@@ -18,19 +19,23 @@ class VisualGrounder:
         positive_words: str,
         picture_taker: PictureTaker,
         captioner: BaseCaptioner,
-    ) -> dict[str, str]:
+    ) -> tuple[dict[str, str], str]:
         """Return a dictionary of image path and its corresponding caption.
 
-        :return: a dictionary of image path and its corresponding caption
+        :return: a dictionary of image path and its corresponding caption and the mesh path
         """
 
         # first step: set positive words
         logger.debug("Set Positive Words in Visual Grounder")
-        logger.debug("positive words: ", positive_words)
+        logger.debug("positive words: " + positive_words)
 
-        image_refs = picture_taker.take_picture(positive_words, session_id)
+        image_refs, grounding_result_mesh_path = picture_taker.take_picture(
+            positive_words, session_id
+        )
 
         # captioner.load_images(image_refs)
         captioner_result = captioner.caption(positive_words, image_refs)
 
-        return captioner_result
+        torch.cuda.empty_cache()  # free up GPU memory
+
+        return captioner_result, grounding_result_mesh_path

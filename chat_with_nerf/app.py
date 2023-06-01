@@ -35,11 +35,12 @@ def set_interactive_false():
 
 def change_scene(
     dropdown_scene: str,
-) -> tuple[str, list, int, str | None, Session]:
+) -> tuple[str, str | None, list, int, str | None, Session]:
     # reset model_3d, chatbot_for_display, chat_counter, server_status_code
     new_session = Session.create_for_scene(dropdown_scene)
     return (
         os.path.join(Settings.data_path, dropdown_scene, "poly.glb"),
+        None,
         new_session.chat_history_for_display,
         new_session.chat_counter,
         None,
@@ -52,18 +53,18 @@ title = """<h1 align="center">🔥 Chat with NeRF using GPT-4 🚀</h1>
 <a href="https://chat-with-nerf.github.io/" target="_blank">[Project Page]</a>
 <a href="https://github.com/sled-group/chat-with-nerf" target="_blank">[Code]</a>
 </center></p>
-<div style="background-color:yellow;color:white;padding:2%;">
-    <center><strong style="color:black;">
-        👋🏻 Note: Sometimes system response might be slow due to popularity of the GPT-4 API.
-    </strong></center>
-    <center><strong style="color:black;">
-        If you encounter the error message "maximum number of free
-        trial turns reached", please refresh the page and retry.
-        We appreciate your understanding and patience! 🙏
-    </strong></center>
-</div>
-
 """
+
+# <div style="background-color:yellow;color:white;padding:2%;">
+#     <center><strong style="color:black;">
+#         👋🏻 Note: Sometimes system response might be slow due to popularity of the GPT-4 API.
+#     </strong></center>
+#     <center><strong style="color:black;">
+#         If you encounter the error message "maximum number of free
+#         trial turns reached", please refresh the page and retry.
+#         We appreciate your understanding and patience! 🙏
+#     </strong></center>
+# </div>
 
 
 # Using info to add additional information about System message in GPT4
@@ -90,24 +91,6 @@ with gr.Blocks() as demo:
     with gr.Column():
         with gr.Row():
             with gr.Column(scale=5):
-                openai_api_key = gr.Textbox(
-                    label=(
-                        "Paste your OpenAI API key here and press Enter↵ "
-                        "or leave emtpy for free trial"
-                    ),
-                    type="password",
-                )
-            with gr.Column(scale=5):
-                with gr.Row():
-                    chat_counter = gr.Textbox(
-                        value=0,
-                        label=f"Turn count (free trial limit: {Settings.MAX_TURNS})",
-                    )
-                    server_status_code = gr.Textbox(
-                        label="Status code from OpenAI server", interactive=False
-                    )
-        with gr.Row():
-            with gr.Column(scale=5):
                 # GPT4 API Key is provided by Huggingface
                 dropdown_scene = gr.Dropdown(
                     choices=list_dirs(Settings.data_path),
@@ -122,20 +105,46 @@ with gr.Blocks() as demo:
                 )
                 gr.HTML(
                     """<center><strong>
-                    👆 To see the scene better, scroll/drag on the 3D Model
-                    to zoom in/out and rotate.
+                    👆 SCROLL or DRAG on the 3D Model
+                    to zoom in/out and rotate. Press CTRL and DRAG to pan.
                     </strong></center>
                     """
                 )
+                gr.HTML(
+                    """<center><strong>
+                    👇 When grounding finishes,
+                    a green bounding sphere will appear around the object of interest.
+                    </strong></center>
+                    """
+                )
+                model_3d_grounding_result = gr.Model3D(
+                    clear_color=[0.0, 0.0, 0.0, 0.0],
+                    label="Grounding Result",
+                )
             with gr.Column(scale=5):
+                with gr.Row():
+                    # openai_api_key = gr.Textbox(
+                    #     label=(
+                    #         "Paste your OpenAI API key here and press Enter↵ "
+                    #         "or leave emtpy for free trial"
+                    #     ),
+                    #     type="password",
+                    # )
+                    chat_counter = gr.Textbox(
+                        value=0,
+                        label=f"Turn count (free trial limit: {Settings.MAX_TURNS})",
+                    )
+                    server_status_code = gr.Textbox(
+                        label="Status code from OpenAI server", interactive=False
+                    )
                 chat_history_for_display = gr.Chatbot(
                     value=[(None, Settings.INITIAL_MSG_FOR_DISPLAY)],
                     label="Chat Assistant",
-                ).style(height="550")
+                ).style(height="600")
                 with gr.Row():
                     with gr.Column(scale=8):
                         user_chat_input = gr.Textbox(
-                            placeholder="I want to find a cutting board",
+                            placeholder="I want to find the chair near the table",
                             show_label=False,
                         )
                     with gr.Column(scale=1, min_width=0):
@@ -149,10 +158,13 @@ with gr.Blocks() as demo:
                     with gr.Accordion(label="Examples for user message:", open=True):
                         gr.Examples(
                             examples=[
+                                ["How many doors are there in this room?"],
+                                ["Find the chair near the table."],
+                                ["Where is the fridge?"],
                                 ["a white plate on a red square-shaped cutting board"],
-                                ["I want to sit down."],
-                                ["Can I get something to drink?"],
                                 ["I am hungry, can you find me something to eat?"],
+                                ["这里一共有几扇门？"],
+                                ["この部屋にはドアが何枚ありますか?"],
                             ],
                             inputs=user_chat_input,
                         )
@@ -198,6 +210,7 @@ The service may collect user dialogue data for future research."""
         inputs=[dropdown_scene],
         outputs=[
             model_3d,
+            model_3d_grounding_result,
             chat_history_for_display,
             chat_counter,
             server_status_code,
@@ -209,6 +222,7 @@ The service may collect user dialogue data for future research."""
         inputs=[dropdown_scene],
         outputs=[
             model_3d,
+            model_3d_grounding_result,
             chat_history_for_display,
             chat_counter,
             server_status_code,
@@ -230,6 +244,7 @@ The service may collect user dialogue data for future research."""
             chat_counter,
             server_status_code,
             session_state,
+            model_3d_grounding_result,
         ],
     )  # openai_api_key
     send_button.click(
@@ -247,6 +262,7 @@ The service may collect user dialogue data for future research."""
             chat_counter,
             server_status_code,
             session_state,
+            model_3d_grounding_result,
         ],
     )  # openai_api_key
 

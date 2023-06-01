@@ -30,37 +30,49 @@ def captioner(mocker):
 
 
 @pytest.fixture
-def clip_model(mocker):
+def session(mocker):
     return mocker.Mock()
 
 
 @pytest.fixture
-def clip_processor(mocker):
+def picture_taker(mocker):
     return mocker.Mock()
 
 
 # Test success case
 def test_ground_success(
-    mocker, dropdown_scene, ground_text, captioner, clip_model, clip_processor
+    mocker,
+    dropdown_scene,
+    ground_text,
+    picture_taker,
+    captioner,
+    session,
 ):
     mocker.patch(
-        "chat_with_nerf.chat.grounder.call_visual_grounder",
-        return_value={"/path/to/image.jpg": "This is a caption."},
+        "chat_with_nerf.chat.grounder.VisualGrounder.call_visual_grounder",
+        return_value=(
+            {"/path/to/image.jpg": "This is a caption."},
+            "some/path/to/mesh.glb",
+        ),
     )
 
-    result = ground(dropdown_scene, ground_text, captioner, clip_model, clip_processor)
+    result = ground(session, dropdown_scene, ground_text, picture_taker, captioner)
 
     assert result == [("/path/to/image.jpg", "This is a caption.")]
 
 
 # Test failure case (e.g., when call_visual_grounder raises an exception)
 def test_ground_failure(
-    mocker, dropdown_scene, ground_text, captioner, clip_model, clip_processor
+    mocker,
+    dropdown_scene,
+    ground_text,
+    captioner,
+    session,
 ):
     mocker.patch(
-        "chat_with_nerf.chat.grounder.call_visual_grounder",
+        "chat_with_nerf.chat.grounder.VisualGrounder.call_visual_grounder",
         side_effect=Exception("Something went wrong."),
     )
 
     with pytest.raises(Exception, match="Something went wrong."):
-        ground(dropdown_scene, ground_text, captioner, clip_model, clip_processor)
+        ground(session, dropdown_scene, ground_text, picture_taker, captioner)
