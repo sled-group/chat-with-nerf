@@ -32,5 +32,5 @@ RESPONSE FORMAT:
     }
 }
 
-Use the langauge the user used to speak.
+Use the langauge the user used to speak. Use English for the ground_text for visual grounder.
 Make sure the response contains all keys listed in the above example and can be parsed by Python json.loads()"""
