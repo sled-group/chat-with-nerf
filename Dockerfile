@@ -152,18 +152,24 @@ RUN python3.10 -m pip install omegaconf
 # RUN chown -R user /home/user/nerfstudio
 # USER 1000
 
-# Install nerfstudio dependencies.
-RUN git clone https://github.com/nerfstudio-project/nerfstudio.git && \
-    cd nerfstudio && \
-    git checkout v0.2.1 &&\
+# install nerfstudio dependencies.
+RUN git clone https://github.com/sled-group/nerfstudio_export.git && \
+    cd nerfstudio_export && \
+    git checkout 4e4d985 &&\
     pip install --upgrade pip setuptools && \
     pip install -e . && \
     cd ..
 
 # Install lerf dependencies.
-RUN git clone https://github.com/kerrj/lerf.git && \
-    cd lerf && \
-    git checkout ca94b13 &&\
+RUN git clone --branch xuweic_faster --single-branch --depth 1 https://github.com/sled-group/lerf_lite.git  && \
+    cd lerf_lite && \
+    git checkout 9831552 &&\
+    python3.10 -m pip install -e . && \
+    cd ..
+
+RUN git clone https://github.com/haotian-liu/LLaVA.git && \
+    cd LLaVA && \
+    git checkout 8b21169 &&\
     python3.10 -m pip install -e . && \
     cd ..
 

@@ -20,8 +20,8 @@ RESPONSE FORMAT:
     {
         "observation": "observation",
         "reasoning": "reasoning",
-        "plan": "- short bulleted\t- list that conveys\t- long-term plan",
-        "criticism": "constructive self-criticism",
+        "plan": "a numbered list of steps to take that conveys the long-term plan",
+        "self-critique": "constructive self-critique",
         "speak": "thoughts summary to say to user"
     },
     "command": {
@@ -32,4 +32,5 @@ RESPONSE FORMAT:
     }
 }
 
-Ensure the response can be parsed by Python json.loads"""
+Use the langauge the user used to speak. Use English for the ground_text for visual grounder.
+Make sure the response contains all keys listed in the above example and can be parsed by Python json.loads()"""

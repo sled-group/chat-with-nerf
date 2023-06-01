@@ -5,13 +5,11 @@ from typing import Optional
 
 import torch
 import yaml
-from attrs import Factory, define
+from attrs import define
 
 # from lavis.models import load_model_and_preprocess  # type: ignore
 from llava import LlavaLlamaForCausalLM
 from llava.utils import disable_torch_init
-from nerfstudio.pipelines.base_pipeline import Pipeline
-from nerfstudio.utils.eval_utils import eval_setup
 from transformers import AutoTokenizer, CLIPImageProcessor, CLIPVisionModel
 
 from chat_with_nerf import logger
@@ -21,14 +19,16 @@ from chat_with_nerf.visual_grounder.captioner import (  # Blip2Captioner,
     BaseCaptioner,
     LLaVaCaptioner,
 )
-from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
+from chat_with_nerf.visual_grounder.picture_taker import (
+    PictureTaker,
+    PictureTakerFactory,
+)
 
 
 @define
 class ModelContext:
     scene_configs: dict[str, SceneConfig]
-    visual_grounder: dict[str, VisualGrounder]
-    pipeline: dict[str, Pipeline]
+    picture_takers: dict[str, PictureTaker]
     captioner: BaseCaptioner
 
 
@@ -53,30 +53,12 @@ class ModelContextManager:
         scene_configs = ModelContextManager.search_scenes(Settings.data_path)
 
         logger.info("Initialize Captioner")
-        if Settings.TYPE_CAPTIONER == "blip2":
-            print("blip2")
-            # captioner = ModelContextManager.initiaze_blip_captioner()
-        else:
-            captioner = ModelContextManager.initiaze_llava_captioner()
+        captioner = ModelContextManager.initiaze_llava_captioner()
 
-        logger.info("Initialize LERF pipelines and visualGrounder for all scenes")
-        pipeline = {}
-        visual_grounder_ins = {}
-        initial_dir = os.getcwd()
-        for scene_name, scene_config in scene_configs.items():
-            # LERF's implementation requires to find output directory
-            os.chdir(Settings.data_path + "/" + scene_name)
-            lerf_pipeline = ModelContextManager.initialize_lerf_pipeline(
-                scene_config.load_lerf_config
-            )
-            pipeline[scene_name] = lerf_pipeline
-            visual_grounder_ins[scene_name] = VisualGrounder(
-                Settings.output_path, scene_config.camera_poses, lerf_pipeline
-            )
+        logger.info("Initialize picture_taker for all scenes")
+        picture_taker_dict = PictureTakerFactory.get_picture_takers(scene_configs)
 
-        # move back the current directory
-        os.chdir(initial_dir)
-        return ModelContext(scene_configs, visual_grounder_ins, pipeline, captioner)
+        return ModelContext(scene_configs, picture_taker_dict, captioner)
 
     @staticmethod
     def search_scenes(path: str) -> dict[str, SceneConfig]:
@@ -90,21 +72,14 @@ class ModelContextManager:
             with open(scene_path) as f:
                 data = yaml.safe_load(f)
             scene = SceneConfig(
-                data["load_lerf_config"], data["camera_path"], data["camera_poses"]
+                subdirectory,
+                data["load_lerf_config"],
+                data["load_embedding"],
+                data["camera_path"],
+                data["nerf_exported_mesh_path"],
             )
             scenes[subdirectory] = scene
         return scenes
-
-    # @staticmethod
-    # def initiaze_blip_captioner() -> Blip2Captioner:
-    #     model, vis_processors, _ = load_model_and_preprocess(
-    #         name="blip2_t5",
-    #         model_type="pretrain_flant5xxl",
-    #         is_eval=True,
-    #         device=torch.device("cuda") if torch.cuda.is_available() else "cpu",
-    #     )
-
-    #     return Blip2Captioner(model, vis_processors)
 
     @staticmethod
     def initiaze_llava_captioner() -> LLaVaCaptioner:
@@ -157,20 +132,8 @@ class ModelContextManager:
         captioner = LLaVaCaptioner(
             model,
             image_processor,
-            Factory(list),
             tokenizer,
             mm_use_im_start_end,
             image_token_len,
-            "computer",
         )
         return captioner
-
-    @staticmethod
-    def initialize_lerf_pipeline(load_config: str) -> Pipeline:
-        _, lerf_pipeline, _, _ = eval_setup(
-            Path(load_config),
-            eval_num_rays_per_chunk=None,
-            test_mode="test",
-        )
-
-        return lerf_pipeline
