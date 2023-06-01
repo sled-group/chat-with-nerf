@@ -137,7 +137,7 @@ class PictureTaker:
 
         # Apply DBSCAN clustering
         epsilon = 0.05  # Radius of the neighborhood
-        min_samples = 50  # Minimum number of samples in a cluster
+        min_samples = 20  # Minimum number of samples in a cluster
         dbscan = DBSCAN(eps=epsilon, min_samples=min_samples)
         clusters = dbscan.fit(top_positions)
 
