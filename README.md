@@ -19,7 +19,7 @@
 - [2023-05-15] The first version of chat-with-nerf is available now! Please try out [demo](http://sled-whistler.eecs.umich.edu:7777/)!
 
 ## :label: TODO
-- [x] A faster process to determine camera poses and rendering pictures. See discussion #15. Implemented in #17.
+- [x] A faster process to determine camera poses and rendering pictures. See discussion [#15](https://github.com/sled-group/chat-with-nerf/issues/15). Implemented in [#17](https://github.com/sled-group/chat-with-nerf/pull/17).
 - [x] Use [LLaVA](https://llava-vl.github.io/) to replace BLIP-2 for better image captioning.
 - [ ] Improve the foundation model (currently CLIP is used) used in LERF for grounding, which can potentially improve spatial and affordance understanding. Potential candidate: [LLaVA](https://llava-vl.github.io/), [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2), [OWL-ViT](https://huggingface.co/docs/transformers/model_doc/owlvit).
 
