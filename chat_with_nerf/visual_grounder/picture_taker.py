@@ -5,6 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
 
+import open3d as o3d
 import h5py
 import mediapy as media
 import numpy as np
@@ -134,7 +135,10 @@ class PictureTaker:
         )
 
         points = self.h5_dict["points"]
+        values = self.h5_dict["values"]
         colors = self.h5_dict["rgb"]
+        origins = self.h5_dict["origins"]
+        # directions = self.h5_dict["directions"]
 
         # Assuming you have the indices of the selected points
         selected_indices = top_indices
@@ -144,27 +148,31 @@ class PictureTaker:
         # opacity = 1.0  # Fully opaque
         colors[selected_indices, :] = red_color
 
-        vertices = np.hstack((points, colors))
-        faces = np.arange(len(points)).reshape(-1, 1)
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, process=False)
-        output_path = Settings.output_path + "/" + session_id + "/output.glb"
-        mesh.export(output_path, file_type="glb")
+        mesh = o3d.io.read_triangle_mesh(
+            "/workspace/dev/home_1_nerfacto_poisson_export/poisson_mesh.ply"
+        )
+        top_positions = points[top_indices]
+        top_values = values[top_indices]
+        top_origins = origins[top_indices]
+        points = top_positions  # Random points in [0, 1)
+        # positions = points  # Replace with your positions
+        colors = red_color  # Replace with your colors
 
-        # pcd = o3d.geometry.PointCloud()
+        # Create a PointCloud object
+        pcd = o3d.geometry.PointCloud()
 
-        # # Set the points and colors
-        # pcd.points = o3d.utility.Vector3dVector(points)
-        # pcd.colors = o3d.utility.Vector3dVector(colors)
+        # Set the positions and colors
+        pcd.points = o3d.utility.Vector3dVector(points)
+        pcd.colors = o3d.utility.Vector3dVector(colors)
 
-        # # Save the point cloud as a PCD file
-        # output_path = Settings.output_path + "/" + session_id + "/output.pcd"
-        # o3d.io.write_point_cloud("output.pcd", pcd)
+        radius = 0.02  # You may need to adjust this
+        bpa_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
+            pcd, o3d.utility.DoubleVector([radius, radius * 2])
+        )
+        combined_mesh = bpa_mesh + mesh
 
+        o3d.io.write_triangle_mesh("mesh.glb", combined_mesh, write_vertex_colors=True)
         logger.info("Clustering...")
-
-        # Retrieve the corresponding positions using the top indices
-        top_positions = self.h5_dict["points"][top_indices]
-        # top_values = possibility_array[top_indices]
 
         # Apply DBSCAN clustering
         epsilon = 0.05  # Radius of the neighborhood
@@ -175,6 +183,10 @@ class PictureTaker:
         labels = clusters.labels_
 
         centroids = []
+        top_values_in_clusters = []
+        top_points_in_clusters = []
+        max_index = []
+        # Iterate over each cluster ID
         for cluster_id in set(labels):
             if cluster_id == -1:  # Noise
                 continue
@@ -184,11 +196,25 @@ class PictureTaker:
                     labels == cluster_id
                 ]  # Get all members of the cluster
                 centroids.append(members.mean(axis=0))  # Compute centroid
+
+                # Find the top value and corresponding point in the cluster
+                member_values = top_values[labels == cluster_id]
+                max_value_index = np.argmax(member_values)
+                max_index.append(max_value_index)
+                top_values_in_clusters.append(member_values[max_value_index])
+                top_points_in_clusters.append(members[max_value_index])
+
+        top_origins_list = []
+
+        for index in max_index:
+            top_origins_list.append(top_origins[max_index, :])
         # centroids -> camera poses
         assert n_phrases_maxs[0] is not None
         c2w_list = [
-            self.compute_camera_to_world_matrix(centroid, n_phrases_maxs[0].item())
-            for centroid in centroids
+            self.compute_camera_to_world_matrix(
+                centroid, origin, n_phrases_maxs[0].item()
+            )
+            for centroid, origin in zip(centroids, top_origins_list)
         ]
         camera_pose_instance = CameraPose()
         camera_poses = [
@@ -241,8 +267,11 @@ class PictureTaker:
             ),
         )[:, 0, :]
 
-    def compute_camera_to_world_matrix(self, point: np.ndarray, k: float) -> np.ndarray:
-        direction = point - np.array([0, 0.2, 0])
+    def compute_camera_to_world_matrix(
+        self, point: np.ndarray, origin: np.ndarray, k: float
+    ) -> np.ndarray:
+        epsilon = 1e-6
+        direction = point - origin
         direction = direction / np.linalg.norm(direction)
 
         camera_position = point - (k * direction)
@@ -250,10 +279,10 @@ class PictureTaker:
         up = np.array([0, 1, 0])
 
         right = np.cross(direction, up)
-        right /= np.linalg.norm(right)
+        right /= np.linalg.norm(right) + epsilon
 
         new_up = np.cross(right, direction)
-        new_up /= np.linalg.norm(new_up)
+        new_up /= np.linalg.norm(new_up) + epsilon
 
         camera_to_world = np.eye(4)
         camera_to_world[:3, 0] = right
@@ -335,6 +364,8 @@ class PictureTakerFactory:
         hdf5_file = h5py.File(load_config, "r")
         # batch_idx = 5
         points = hdf5_file["points"]["points"][:]
+        origins = hdf5_file["origins"]["origins"][:]
+        directions = hdf5_file["directions"]["directions"][:]
 
         clip_embeddings_per_scale = []
 
@@ -345,6 +376,8 @@ class PictureTakerFactory:
         hdf5_file.close()
         h5_dict = {
             "points": points,
+            "origins": origins,
+            "directions": directions,
             "clip_embeddings_per_scale": clip_embeddings_per_scale,
         }
         return h5_dict
