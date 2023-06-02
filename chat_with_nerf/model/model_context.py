@@ -76,6 +76,7 @@ class ModelContextManager:
                 data["load_lerf_config"],
                 data["load_embedding"],
                 data["camera_path"],
+                data["nerf_exported_mesh_path"],
             )
             scenes[subdirectory] = scene
         return scenes

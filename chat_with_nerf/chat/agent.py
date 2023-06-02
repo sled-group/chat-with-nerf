@@ -44,7 +44,7 @@ def act(
     temperature: float,
     dropdown_scene: str,
     session: Session,
-) -> Generator[tuple[list[tuple], int, str | None, Session], None, None]:
+) -> Generator[tuple[list[tuple], int, str | None, Session, str | None], None, None]:
     session.chat_history_for_display.append(
         (inputs, "")
     )  # append in a tuple format, first is user input, second is assistant response
@@ -53,6 +53,7 @@ def act(
         session.chat_counter,
         None,
         session,
+        session.grounding_result_mesh_path,
     )
 
     retry_sleep_time = 0.5
@@ -77,6 +78,7 @@ def act(
                 session.chat_counter,
                 None,
                 session,
+                session.grounding_result_mesh_path,
             )
             return
 
@@ -96,6 +98,7 @@ def act(
                     session.chat_counter,
                     get_status_code_and_reason(response),
                     session,
+                    session.grounding_result_mesh_path,
                 )
                 # sometimes GPT returns an empty response because there were too many requests
                 # in this case we don't change the chat_history_for_llm, simply re-issue the request
@@ -113,6 +116,7 @@ def act(
                 session.chat_counter,
                 get_status_code_and_reason(response),
                 session,
+                session.grounding_result_mesh_path,
             )
             continue
 
@@ -149,6 +153,7 @@ def act(
                 session.chat_counter,
                 get_status_code_and_reason(response),
                 session,
+                session.grounding_result_mesh_path,
             )
 
             # controller logic to decide what to do next
@@ -173,6 +178,7 @@ def act(
                     session.chat_counter,
                     get_status_code_and_reason(response),
                     session,
+                    session.grounding_result_mesh_path,
                 )
 
                 # now start the grounding process
@@ -227,18 +233,22 @@ def act(
                         session.chat_counter,
                         get_status_code_and_reason(response),
                         session,
+                        session.grounding_result_mesh_path,
                     )
-                    time.sleep(0.5)  # Adjust the sleep duration as needed
+                    time.sleep(1)  # Adjust the sleep duration as needed
 
                 session.chat_history_for_display.extend(grounder_returned_chatbot_msg)
 
             elif gpt_response_json["command"]["name"] == "finish_grounding":
                 image_ids = gpt_response_json["command"]["args"]["image_id"]
                 logger.debug(f"session.image_id_to_path: {session.image_id_to_path}")
-                img_id_list = [int(i) for i in image_ids.split(", ")]
+                if type(image_ids) == int:
+                    img_id_list = [image_ids]
+                elif type(image_ids) == str:
+                    img_id_list = [int(i) for i in image_ids.split(", ")]
 
                 markdown_to_display = (
-                    f"**SYSTEM: Grounding finished. Image id: {image_ids}** <br>"
+                    f"**SYSTEM: Grounding finished. Image id: {image_ids}**\n"
                 )
 
                 for img_id in img_id_list:
@@ -249,6 +259,9 @@ def act(
                 give_control_to_user = True
             elif gpt_response_json["command"]["name"] == "end_dialog":
                 session.chat_history_for_display.append(
+                    (None, gpt_response_json["thoughts"]["speak"])
+                )
+                session.chat_history_for_display.append(
                     (None, "**SYSTEM: End of dialog**")
                 )
                 give_control_to_user = True
@@ -258,6 +271,7 @@ def act(
                 session.chat_counter,
                 get_status_code_and_reason(response),
                 session,
+                session.grounding_result_mesh_path,
             )
 
         except Exception as e:
@@ -279,6 +293,7 @@ def act(
         session.chat_counter,
         get_status_code_and_reason(response),
         session,
+        session.grounding_result_mesh_path,
     )
 
 

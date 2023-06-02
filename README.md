@@ -3,22 +3,25 @@
 [![Project](https://img.shields.io/badge/Project-Page-20B2AA.svg)](https://chat-with-nerf.github.io/)
 [![Demo](https://img.shields.io/badge/Website-Demo-ff69b4.svg)](http://sled-whistler.eecs.umich.edu:7777/)
 [![Embark](https://img.shields.io/badge/Discord-Chat--with--NeRF-%237289da.svg?logo=discord)](https://discord.gg/8rT4GpRq9g)
-[![WeChat badge](https://img.shields.io/badge/WeChat-Join-brightgreen?logo=wechat&amp)](https://i.328888.xyz/2023/05/19/VfzlO3.jpeg)
+[![WeChat badge](https://img.shields.io/badge/WeChat-Join-brightgreen?logo=wechat&amp)](https://i.ibb.co/kBSCWsD/IMG-6239.jpg)
 
 
-![Demo of Chat-with-NeRF](figures/demo.png "Overview")
+![Demo of Chat-with-NeRF](https://github.com/sled-group/chat-with-nerf/assets/12980222/6a327112-abbd-4b6a-ba22-e7e254a7fe6c "Overview")
+
+
 ## :bulb: Highlight
 
 - **Open-Vocabulary 3D Localization.** Locate **anything** with natural language dialog!
 - **Dynamic Grounding.** Humans will be able to chat with agent to localize novel objects.
 
 ## :fire: News
-[2023-05-15] The first version of chat-with-nerf is available now! Please try out demo!
-## :star: Explanations/Tips for Chat with NeRF Inputs and Outputs
+- [2023-05-31] We improve the demo by adding groudning result visualization in 3D, taking pictures in real time and speeding up inference by parallelization. Try out the [new demo](http://sled-whistler.eecs.umich.edu:7777/)!
+- [2023-05-15] The first version of chat-with-nerf is available now! Please try out [demo](http://sled-whistler.eecs.umich.edu:7777/)!
 
 ## :label: TODO
-- [ ] A faster process to determine camera poses and rendering pictures. See discussion [here](https://github.com/sled-group/chat-with-nerf/issues/15#issuecomment-1556223848).
-- [ ] Use [LLaVA](https://llava-vl.github.io/) to replace GPT-4-text-only + BLIP for an end-to-end multimodal grounding pipeline.
+- [x] A faster process to determine camera poses and rendering pictures. See discussion [#15](https://github.com/sled-group/chat-with-nerf/issues/15). Implemented in [#17](https://github.com/sled-group/chat-with-nerf/pull/17).
+- [x] Use [LLaVA](https://llava-vl.github.io/) to replace BLIP-2 for better image captioning.
+- [ ] Improve the foundation model (currently CLIP is used) used in LERF for grounding, which can potentially improve spatial and affordance understanding. Potential candidate: [LLaVA](https://llava-vl.github.io/), [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2), [OWL-ViT](https://huggingface.co/docs/transformers/model_doc/owlvit).
 
 ## :hammer_and_wrench: Install
 

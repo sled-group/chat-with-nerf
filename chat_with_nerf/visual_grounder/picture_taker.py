@@ -1,17 +1,16 @@
-import datetime
 import os
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Optional
+from uuid import uuid4
 
-import open3d as o3d
 import h5py
 import mediapy as media
 import numpy as np
+import open3d as o3d
 import open_clip
 import torch
-import trimesh
 from attrs import define
 from nerfstudio.cameras.camera_paths import get_path_from_json
 from nerfstudio.pipelines.base_pipeline import Pipeline
@@ -33,6 +32,7 @@ from chat_with_nerf.visual_grounder.image_ref import ImageRef
 @define
 class PictureTaker:
     scene: str
+    scene_config: SceneConfig
     lerf_pipeline: Pipeline
     h5_dict: dict
     clip_model: CLIPVisionModel
@@ -72,14 +72,10 @@ class PictureTaker:
         if output_image.shape[-1] == 1:
             output_image = np.concatenate((output_image,) * 3, axis=-1)
 
-        # Get the current timestamp
-        now = datetime.datetime.now()
-        # Format the timestamp as a string
-        timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
         # saving rgb
         rgb = "rgb" + str(camera_idx)
         # create file name
-        rgb_filename = rgb + "_" + timestamp_str + ".png"
+        rgb_filename = rgb + "_" + str(uuid4()) + ".png"
         result[rgb] = str(rgb_image_dir) + "/" + rgb_filename
         media.write_image(result[rgb], output_image)
 
@@ -87,7 +83,9 @@ class PictureTaker:
 
         return imageRef
 
-    def take_picture(self, query: str, session_id: str) -> list[ImageRef]:
+    def take_picture(self, query: str, session_id: str) -> tuple[list[ImageRef], str]:
+        """Returns a list of ImageRef and the path to the grounding result mesh
+        file."""
         positives = [query]
         with torch.no_grad():
             tok_phrases = torch.cat(
@@ -126,7 +124,7 @@ class PictureTaker:
         percentage_points = int(num_points * 0.005)
         flattened_values = possibility_array.flatten()
 
-        # # Find the indices of the top 5% values
+        # # Find the indices of the top 0.5% values
         top_indices = np.argpartition(flattened_values, -percentage_points)[
             -percentage_points:
         ]
@@ -136,47 +134,19 @@ class PictureTaker:
 
         points = self.h5_dict["points"]
         values = self.h5_dict["values"]
-        colors = self.h5_dict["rgb"]
+        # colors = self.h5_dict["rgb"]
         origins = self.h5_dict["origins"]
         # directions = self.h5_dict["directions"]
 
-        # Assuming you have the indices of the selected points
-        selected_indices = top_indices
-
-        # Set the color of selected points to red and make them fully opaque
-        red_color = np.tile(np.array([1.0, 0.0, 0.0]), (len(selected_indices), 1))
-        # opacity = 1.0  # Fully opaque
-        colors[selected_indices, :] = red_color
-
-        mesh = o3d.io.read_triangle_mesh(
-            "/workspace/dev/home_1_nerfacto_poisson_export/poisson_mesh.ply"
-        )
         top_positions = points[top_indices]
         top_values = values[top_indices]
         top_origins = origins[top_indices]
-        points = top_positions  # Random points in [0, 1)
-        # positions = points  # Replace with your positions
-        colors = red_color  # Replace with your colors
 
-        # Create a PointCloud object
-        pcd = o3d.geometry.PointCloud()
-
-        # Set the positions and colors
-        pcd.points = o3d.utility.Vector3dVector(points)
-        pcd.colors = o3d.utility.Vector3dVector(colors)
-
-        radius = 0.02  # You may need to adjust this
-        bpa_mesh = o3d.geometry.TriangleMesh.create_from_point_cloud_ball_pivoting(
-            pcd, o3d.utility.DoubleVector([radius, radius * 2])
-        )
-        combined_mesh = bpa_mesh + mesh
-
-        o3d.io.write_triangle_mesh("mesh.glb", combined_mesh, write_vertex_colors=True)
         logger.info("Clustering...")
 
         # Apply DBSCAN clustering
         epsilon = 0.05  # Radius of the neighborhood
-        min_samples = 100  # Minimum number of samples in a cluster
+        min_samples = 20  # Minimum number of samples in a cluster
         dbscan = DBSCAN(eps=epsilon, min_samples=min_samples)
         clusters = dbscan.fit(top_positions)
 
@@ -204,17 +174,26 @@ class PictureTaker:
                 top_values_in_clusters.append(member_values[max_value_index])
                 top_points_in_clusters.append(members[max_value_index])
 
-        top_origins_list = []
+        # Remove duplicate centroids by looking for its corresponding origins
+        top_origins_list = top_origins[max_index, :]
+        unique_position_dict = {}
+        for i, array in enumerate(top_origins_list):
+            tuple_array = tuple(array)
+            if tuple_array not in unique_position_dict:
+                unique_position_dict[tuple_array] = i
 
-        for index in max_index:
-            top_origins_list.append(top_origins[max_index, :])
-        # centroids -> camera poses
+        # Use the indices in unique_tuples to select from the other list
+        unique_centroids = [centroids[i] for i in unique_position_dict.values()]
+
+        # Convert tuples back to arrays
+        unique_positions = [np.array(array) for array in unique_position_dict.keys()]
+
         assert n_phrases_maxs[0] is not None
         c2w_list = [
             self.compute_camera_to_world_matrix(
                 centroid, origin, n_phrases_maxs[0].item()
             )
-            for centroid, origin in zip(centroids, top_origins_list)
+            for centroid, origin in zip(unique_centroids, unique_positions)
         ]
         camera_pose_instance = CameraPose()
         camera_poses = [
@@ -224,20 +203,92 @@ class PictureTaker:
         lerf_pipelines = [self.lerf_pipeline] * len(camera_poses)
         session_id_list = [session_id] * len(camera_poses)
         # camera pose -> render pictures
-        # put it in a 'with' block so that we will wait on all threads to finish
-        # see https://stackoverflow.com/a/70003564
-        with self.thread_pool_executor as exe:
-            picture_paths: Iterator[ImageRef] = exe.map(
-                lambda tup: PictureTaker.render_picture(*tup),
-                (
-                    (lerf_pipeline, camera_pose, session_id)
-                    for lerf_pipeline, camera_pose, session_id in zip(
-                        lerf_pipelines, camera_poses, session_id_list
-                    )
-                ),
-            )
+        picture_paths: Iterator[ImageRef] = self.thread_pool_executor.map(
+            lambda tup: PictureTaker.render_picture(*tup),
+            (
+                (lerf_pipeline, camera_pose, session_id)
+                for lerf_pipeline, camera_pose, session_id in zip(
+                    lerf_pipelines, camera_poses, session_id_list
+                )
+            ),
+        )
 
-        return list(picture_paths)
+        # Visualize the highlighted points by drawing 3D bounding boxes overlay on a mesh
+        mesh_file_path = self.highlight_clusters_in_mesh(
+            session_id=session_id, labels=labels, top_positions=top_positions
+        )
+
+        return list(picture_paths), mesh_file_path
+
+    def highlight_clusters_in_mesh(
+        self, session_id: str, labels: np.ndarray, top_positions: np.ndarray
+    ) -> str:
+        # Visualize the highlighted points by drawing 3D bounding boxes overlay on a mesh
+        output_path = os.path.join(Settings.output_path, "mesh_vis")
+        if not os.path.exists(output_path):
+            os.makedirs(output_path)
+        mesh_file_path = os.path.join(output_path, f"{session_id}.glb")
+
+        mesh = o3d.io.read_triangle_mesh(self.scene_config.nerf_exported_mesh_path)
+
+        # Create mesh for the bounding box and set color to red
+        for cluster_id in set(labels):
+            if cluster_id == -1:  # Noise
+                continue
+            else:
+                members = top_positions[
+                    labels == cluster_id
+                ]  # Get all members of the cluster
+                centroid = members.mean(axis=0)  # Compute centroid
+                furthest_distance = np.max(
+                    np.linalg.norm(members - centroid, axis=1)
+                )  # Compute furthest distance
+                sphere = self.create_mesh_sphere(
+                    centroid,
+                    furthest_distance,
+                    color=[0.0, 1.0, 0.0],  # color the sphere green
+                )
+                mesh += sphere
+
+        mesh = self.prettify_mesh_for_gradio(mesh)
+        o3d.io.write_triangle_mesh(mesh_file_path, mesh, write_vertex_colors=True)
+
+        return mesh_file_path
+
+    @staticmethod
+    def prettify_mesh_for_gradio(mesh):
+        # Define the transformation matrix
+        T = np.array([[0, -1, 0, 0], [0, 0, 1, 0], [-1, 0, 0, 0], [0, 0, 0, 1]])
+
+        # Apply the transformation
+        mesh.transform(T)
+
+        mesh.scale(5.0, center=mesh.get_center())
+
+        bright_factor = 1.5  # Adjust this factor to get the desired brightness
+        mesh.vertex_colors = o3d.utility.Vector3dVector(
+            np.clip(np.asarray(mesh.vertex_colors) * bright_factor, 0, 1)
+        )
+
+        return mesh
+
+    @staticmethod
+    def create_mesh_sphere(center, radius, color=[0.0, 1.0, 0.0], resolution=30):
+        # Create a unit sphere (radius 1, centered at origin)
+        mesh_sphere = o3d.geometry.TriangleMesh.create_sphere(
+            radius=1.0, resolution=resolution
+        )
+
+        # Scale to the desired radius
+        mesh_sphere.scale(radius, center=(0, 0, 0))
+
+        # Translate to the desired center
+        mesh_sphere.translate(center)
+
+        # Paint it with the desired color
+        mesh_sphere.paint_uniform_color(color)
+
+        return mesh_sphere
 
     def get_relevancy(
         self,
@@ -336,6 +387,7 @@ class PictureTakerFactory:
             thread_pool_executor = ThreadPoolExecutor(max_workers=Settings.MAX_WORKERS)
             picture_taker_dict[scene_name] = PictureTaker(
                 scene=scene_config.scene_name,
+                scene_config=scene_config,
                 lerf_pipeline=lerf_pipeline,
                 h5_dict=h5_dict,
                 clip_model=model,
@@ -373,11 +425,13 @@ class PictureTakerFactory:
         for i in range(30):
             clip_embeddings_per_scale.append(clips_group[f"scale_{i}"][:])
 
+        rgb = hdf5_file["rgb"]["rgb"][:]
         hdf5_file.close()
         h5_dict = {
             "points": points,
             "origins": origins,
             "directions": directions,
             "clip_embeddings_per_scale": clip_embeddings_per_scale,
+            "rgb": rgb,
         }
         return h5_dict

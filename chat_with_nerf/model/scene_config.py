@@ -7,3 +7,4 @@ class SceneConfig:
     load_lerf_config: str
     load_h5_config: str
     camera_path: str
+    nerf_exported_mesh_path: str

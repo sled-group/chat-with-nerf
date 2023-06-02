@@ -9,7 +9,7 @@ from chat_with_nerf.visual_grounder.visual_grounder import VisualGrounder
 
 
 def ground(
-    session_id: str,
+    session: Session,
     dropdown_scene: str,
     ground_text: str,
     picture_taker: PictureTaker,
@@ -41,9 +41,10 @@ def ground(
 
     logger.info(f"Ground Text: {ground_text}")
     # TODO: fix this!
-    response = VisualGrounder.call_visual_grounder(
-        session_id, ground_text, picture_taker, captioner
+    response, grounding_result_mesh_path = VisualGrounder.call_visual_grounder(
+        session.session_id, ground_text, picture_taker, captioner
     )
+    session.grounding_result_mesh_path = grounding_result_mesh_path
     result = []
     for img_path, img_caption in response.items():
         # Gradio uses http://localhost:7777/file=/absolute/path/example.jpg to access files,
@@ -62,7 +63,7 @@ def ground_with_callback(
     callback: Callable[[list[tuple[str, str]], Session], None],
 ):
     result = ground(
-        session.session_id,
+        session,
         dropdown_scene,
         ground_text,
         picture_taker,
