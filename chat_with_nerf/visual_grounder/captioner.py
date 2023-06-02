@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
@@ -26,7 +27,8 @@ class BaseCaptioner:
         raw_image = Image.open(image_path).convert("RGB")
         return self.vis_processors["eval"](raw_image).unsqueeze(0).to(self.model.device)
 
-    def caption(self, positive_words: str, imagerefs: list[ImageRef]):
+    @abstractmethod
+    def caption(self, positive_words: str, imagerefs: list[ImageRef]) -> dict[str, str]:
         """Generates captions for the images."""
         pass
 

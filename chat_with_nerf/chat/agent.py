@@ -188,12 +188,18 @@ def act(
                 grounder_returned_chatbot_msg = None
 
                 def grounding_callback(
-                    grounder_results: list[tuple[str, str]], session: Session
+                    grounder_results: list[tuple[str, str] | None], session: Session
                 ) -> None:
                     # this function is called when the grounder finishes
                     nonlocal grounder_returned_chatbot_msg, inputs, give_control_to_user
+
+                    # TODO: grounder_results can be None, we should handle it
+                    if grounder_results is None:
+                        inputs = "Visual grounder did not return any images."
+                        return
+
                     chatbot_msg_for_user, pure_text_for_gpt = display_grounder_results(
-                        grounder_results, session
+                        grounder_results, session  # type: ignore
                     )
                     inputs = pure_text_for_gpt
                     give_control_to_user = False
@@ -246,6 +252,8 @@ def act(
                     img_id_list = [image_ids]
                 elif type(image_ids) == str:
                     img_id_list = [int(i) for i in image_ids.split(", ")]
+                elif type(image_ids) == list:
+                    img_id_list = image_ids
 
                 markdown_to_display = (
                     f"**SYSTEM: Grounding finished. Image id: {image_ids}**\n"

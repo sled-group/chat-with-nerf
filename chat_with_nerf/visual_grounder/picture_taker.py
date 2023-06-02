@@ -83,7 +83,9 @@ class PictureTaker:
 
         return imageRef
 
-    def take_picture(self, query: str, session_id: str) -> tuple[list[ImageRef], str]:
+    def take_picture(
+        self, query: str, session_id: str
+    ) -> tuple[list[ImageRef], str | None]:
         """Returns a list of ImageRef and the path to the grounding result mesh
         file."""
         positives = [query]
@@ -97,8 +99,10 @@ class PictureTaker:
         scales_list = torch.linspace(0.0, 1.5, 30)
 
         n_phrases = len(positives)
-        n_phrases_maxs: list[None | Tensor] = [None for _ in range(n_phrases)]
-        n_phrases_sims: list[None | Tensor] = [None for _ in range(n_phrases)]
+        best_scale_for_phrases: list[None | Tensor] = [None for _ in range(n_phrases)]
+        probability_per_scale_per_phrase: list[None | Tensor] = [
+            None for _ in range(n_phrases)
+        ]
         for i, scale in enumerate(scales_list):
             clip_output = torch.from_numpy(
                 self.h5_dict["clip_embeddings_per_scale"][i]
@@ -113,13 +117,14 @@ class PictureTaker:
                 )
                 pos_prob = probs[..., 0:1]
                 if (
-                    n_phrases_maxs[i] is None
-                    or pos_prob.max() > n_phrases_sims[i].max()  # type: ignore
+                    best_scale_for_phrases[i] is None
+                    or pos_prob.max() > probability_per_scale_per_phrase[i].max()  # type: ignore
                 ):
-                    n_phrases_maxs[i] = scale
-                    n_phrases_sims[i] = pos_prob
+                    best_scale_for_phrases[i] = scale
+                    probability_per_scale_per_phrase[i] = pos_prob
 
-        possibility_array = n_phrases_sims[0].detach().cpu().numpy()  # type: ignore
+        possibility_array = probability_per_scale_per_phrase[0].detach().cpu().numpy()  # type: ignore # noqa: E501
+        # best_scale = best_scale_for_phrases[0].item()
         num_points = possibility_array.shape[0]
         percentage_points = int(num_points * 0.005)
         flattened_values = possibility_array.flatten()
@@ -128,30 +133,37 @@ class PictureTaker:
         top_indices = np.argpartition(flattened_values, -percentage_points)[
             -percentage_points:
         ]
+
+        # top_indices = np.nonzero(possibility_array > 0.55)[0]
+        if np.nonzero(possibility_array > 0.55)[0].shape[0] == 0:
+            logger.info("No points found for clustering.")
+            return [], None
+
+        logger.info(f"Selected {top_indices.shape[0]} points for clustering.")
+
         points = self.h5_dict["points"]
-        values = self.h5_dict["values"]
-        # colors = self.h5_dict["rgb"]
         origins = self.h5_dict["origins"]
-        # directions = self.h5_dict["directions"]
 
         top_positions = points[top_indices]
-        top_values = values[top_indices]
         top_origins = origins[top_indices]
+        top_values = possibility_array[top_indices].flatten()
 
         logger.info("Clustering...")
 
         # Apply DBSCAN clustering
-        epsilon = 0.05  # Radius of the neighborhood
-        min_samples = 20  # Minimum number of samples in a cluster
+        epsilon = 0.05  # The maximum distance between two samples for one to be considered as in the neighborhood of the other. # noqa: E501
+        min_samples = int(15)  # Minimum number of samples in a cluster
         dbscan = DBSCAN(eps=epsilon, min_samples=min_samples)
         clusters = dbscan.fit(top_positions)
 
         labels = clusters.labels_
 
-        centroids = []
-        # top_values_in_clusters = []
-        # top_points_in_clusters = []
-        max_index = []
+        logger.info(f"Found {len(set(labels))} clusters.")
+
+        # Find the closest member to the centroid of each cluster
+        # and use its origin to render the picture
+        best_member_list = []
+        origin_for_best_member_list = []
         # Iterate over each cluster ID
         for cluster_id in set(labels):
             if cluster_id == -1:  # Noise
@@ -161,38 +173,26 @@ class PictureTaker:
                 members = top_positions[
                     labels == cluster_id
                 ]  # Get all members of the cluster
-                centroids.append(members.mean(axis=0))  # Compute centroid
+                valuess_for_members = top_values[labels == cluster_id]
+                orgins_for_this_cluster = top_origins[labels == cluster_id]
 
-                # Find the top value and corresponding point in the cluster
-                member_values = top_values[labels == cluster_id]
-                max_value_index = np.argmax(member_values)
-                max_index.append(max_value_index)
-                # top_values_in_clusters.append(member_values[max_value_index])
-                # top_points_in_clusters.append(members[max_value_index])
+                best_index = np.argmax(valuess_for_members, axis=0)
 
-        # Remove duplicate centroids by looking for its corresponding origins
-        # top_origins_list = top_origins[max_index, :]
-        # unique_position_dict = {}
-        # for i, array in enumerate(top_origins_list):
-        #     tuple_array = tuple(array)
-        #     if tuple_array not in unique_position_dict:
-        #         unique_position_dict[tuple_array] = i
+                closest_member_to_centroid = members[best_index]
+                best_member_list.append(closest_member_to_centroid)
 
-        # # Use the indices in unique_tuples to select from the other list
-        # unique_centroids = [centroids[i] for i in unique_position_dict.values()]
-        selected_origin = []
+                origin_of_best_member = orgins_for_this_cluster[best_index]
+                origin_for_best_member_list.append(origin_of_best_member)
 
-        for index in max_index:
-            selected_origin.append(top_origins[index])
-        # # Convert tuples back to arrays
-        # unique_positions = [np.array(array) for array in unique_position_dict.keys()]
-
-        assert n_phrases_maxs[0] is not None
+        assert best_scale_for_phrases[0] is not None
         c2w_list = [
             self.compute_camera_to_world_matrix(
-                centroid, origin, n_phrases_maxs[0].item()
+                member, origin, best_scale_for_phrases[0].item()
             )
-            for centroid, origin in zip(centroids, selected_origin)
+            for member, origin in zip(
+                best_member_list,
+                origin_for_best_member_list,
+            )
         ]
         camera_pose_instance = CameraPose()
         camera_poses = [
@@ -265,7 +265,7 @@ class PictureTaker:
         # Apply the transformation
         mesh.transform(T)
 
-        mesh.scale(5.0, center=mesh.get_center())
+        mesh.scale(10.0, center=mesh.get_center())
 
         bright_factor = 1.5  # Adjust this factor to get the desired brightness
         mesh.vertex_colors = o3d.utility.Vector3dVector(

@@ -19,7 +19,7 @@ class VisualGrounder:
         positive_words: str,
         picture_taker: PictureTaker,
         captioner: BaseCaptioner,
-    ) -> tuple[dict[str, str], str]:
+    ) -> tuple[dict[str, str] | None, str | None]:
         """Return a dictionary of image path and its corresponding caption.
 
         :return: a dictionary of image path and its corresponding caption and the mesh path
@@ -33,8 +33,12 @@ class VisualGrounder:
             positive_words, session_id
         )
 
-        # captioner.load_images(image_refs)
-        captioner_result = captioner.caption(positive_words, image_refs)
+        logger.info(f"Took {len(image_refs)} pictures.")
+
+        if len(image_refs) == 0:
+            captioner_result = None
+        else:
+            captioner_result = captioner.caption(positive_words, image_refs)
 
         torch.cuda.empty_cache()  # free up GPU memory
 
