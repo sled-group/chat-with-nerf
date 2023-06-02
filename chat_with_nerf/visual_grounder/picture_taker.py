@@ -128,10 +128,6 @@ class PictureTaker:
         top_indices = np.argpartition(flattened_values, -percentage_points)[
             -percentage_points:
         ]
-        logger.info(
-            "Export RGB GLB files highlighted the top 5% values with color of red..."
-        )
-
         points = self.h5_dict["points"]
         values = self.h5_dict["values"]
         # colors = self.h5_dict["rgb"]
@@ -153,8 +149,8 @@ class PictureTaker:
         labels = clusters.labels_
 
         centroids = []
-        top_values_in_clusters = []
-        top_points_in_clusters = []
+        # top_values_in_clusters = []
+        # top_points_in_clusters = []
         max_index = []
         # Iterate over each cluster ID
         for cluster_id in set(labels):
@@ -171,29 +167,32 @@ class PictureTaker:
                 member_values = top_values[labels == cluster_id]
                 max_value_index = np.argmax(member_values)
                 max_index.append(max_value_index)
-                top_values_in_clusters.append(member_values[max_value_index])
-                top_points_in_clusters.append(members[max_value_index])
+                # top_values_in_clusters.append(member_values[max_value_index])
+                # top_points_in_clusters.append(members[max_value_index])
 
         # Remove duplicate centroids by looking for its corresponding origins
-        top_origins_list = top_origins[max_index, :]
-        unique_position_dict = {}
-        for i, array in enumerate(top_origins_list):
-            tuple_array = tuple(array)
-            if tuple_array not in unique_position_dict:
-                unique_position_dict[tuple_array] = i
+        # top_origins_list = top_origins[max_index, :]
+        # unique_position_dict = {}
+        # for i, array in enumerate(top_origins_list):
+        #     tuple_array = tuple(array)
+        #     if tuple_array not in unique_position_dict:
+        #         unique_position_dict[tuple_array] = i
 
-        # Use the indices in unique_tuples to select from the other list
-        unique_centroids = [centroids[i] for i in unique_position_dict.values()]
+        # # Use the indices in unique_tuples to select from the other list
+        # unique_centroids = [centroids[i] for i in unique_position_dict.values()]
+        selected_origin = []
 
-        # Convert tuples back to arrays
-        unique_positions = [np.array(array) for array in unique_position_dict.keys()]
+        for index in max_index:
+            selected_origin.append(top_origins[index])
+        # # Convert tuples back to arrays
+        # unique_positions = [np.array(array) for array in unique_position_dict.keys()]
 
         assert n_phrases_maxs[0] is not None
         c2w_list = [
             self.compute_camera_to_world_matrix(
                 centroid, origin, n_phrases_maxs[0].item()
             )
-            for centroid, origin in zip(unique_centroids, unique_positions)
+            for centroid, origin in zip(centroids, selected_origin)
         ]
         camera_pose_instance = CameraPose()
         camera_poses = [
@@ -214,6 +213,9 @@ class PictureTaker:
         )
 
         # Visualize the highlighted points by drawing 3D bounding boxes overlay on a mesh
+        logger.info(
+            "Export RGB GLB files drawing 3D bounding boxes overlay on a mesh..."
+        )
         mesh_file_path = self.highlight_clusters_in_mesh(
             session_id=session_id, labels=labels, top_positions=top_positions
         )
