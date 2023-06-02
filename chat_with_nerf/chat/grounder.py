@@ -14,7 +14,7 @@ def ground(
     ground_text: str,
     picture_taker: PictureTaker,
     captioner: BaseCaptioner,
-) -> list[tuple[str, str]]:
+) -> list[tuple[str, str]] | None:
     """Ground a text in a scene by returning the relavant images and their
     corresponding captions.
 
@@ -41,12 +41,21 @@ def ground(
 
     logger.info(f"Ground Text: {ground_text}")
     # TODO: fix this!
-    response, grounding_result_mesh_path = VisualGrounder.call_visual_grounder(
+    captioner_result, grounding_result_mesh_path = VisualGrounder.call_visual_grounder(
         session.session_id, ground_text, picture_taker, captioner
     )
+    logger.debug(f"call_visual_grounder captioner_result: {captioner_result}")
+    logger.debug(
+        f"call_visual_grounder grounding_result_mesh_path: {grounding_result_mesh_path}"
+    )
+
     session.grounding_result_mesh_path = grounding_result_mesh_path
+
+    if captioner_result is None:
+        return None
+
     result = []
-    for img_path, img_caption in response.items():
+    for img_path, img_caption in captioner_result.items():
         # Gradio uses http://localhost:7777/file=/absolute/path/example.jpg to access files,
         # can use relative too, just drop the leading slash
         result.append((img_path, img_caption))
@@ -60,7 +69,7 @@ def ground_with_callback(
     ground_text: str,
     picture_taker: PictureTaker,
     captioner: BaseCaptioner,
-    callback: Callable[[list[tuple[str, str]], Session], None],
+    callback: Callable[[list[tuple[str, str]] | None, Session], None],
 ):
     result = ground(
         session,

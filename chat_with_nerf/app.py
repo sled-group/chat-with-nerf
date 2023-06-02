@@ -283,7 +283,7 @@ for x in range(1, 8):  # try 8 times
         gr.close_all()
         demo.queue(
             max_size=20,
-            concurrency_count=3,
+            concurrency_count=5,
             api_open=False,
         ).launch(
             debug=True,
