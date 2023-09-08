@@ -23,6 +23,7 @@ from torch import Tensor
 from transformers import AutoTokenizer, CLIPVisionModel
 
 from chat_with_nerf import logger
+from chat_with_nerf.chat.session import Session
 from chat_with_nerf.model.scene_config import SceneConfig
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.visual_grounder.camera_pose import CameraPose
@@ -43,7 +44,7 @@ class PictureTaker:
 
     @staticmethod
     def render_picture(
-        lerf_pipeline: Pipeline, camera_pose: dict, session_id: str
+        lerf_pipeline: Pipeline, camera_pose: dict, session: Session
     ) -> ImageRef:
         logger.info("Picture Taking...")
         install_checks.check_ffmpeg_installed()
@@ -51,7 +52,9 @@ class PictureTaker:
         # camera_type = CameraType.PESPECTIVE
         camera.rescale_output_resolution(1.0)
         camera = camera.to(lerf_pipeline.device)
-        output_filepath_path = Path(Settings.output_path) / session_id / "images"
+        output_filepath_path = (
+            Path(Settings.output_path) / session.session_id / "images"
+        )
         rgb_image_dir = output_filepath_path / "rgb"
         rgb_image_dir.mkdir(parents=True, exist_ok=True)
 
@@ -83,8 +86,187 @@ class PictureTaker:
 
         return imageRef
 
+    def combine_probabilities(self, P_A, P_B, alpha=0.7):
+        """
+        Combine two probabilities P(A) and P(B) using the heuristic method.
+
+        Parameters:
+        - P_A: Probability of event A
+        - P_B: Probability of event B
+        - alpha: Weight given to P(A). Should be in the range [0, 1]. Default is 0.7.
+
+        Returns:
+        - Combined probability P(A U B)
+        """
+        combined_prob = alpha * P_A + (1 - alpha) * P_B
+
+        # Clip the result to [0, 1] to ensure it's a valid probability
+        return min(max(combined_prob, 0), 1)
+
+    def visual_ground_pipeline_no_gpt(self, query: str, session_id: str):
+        prob_per_scale = self.compute_probability_query_property(query, session_id)
+        best_scale_for_phrases: list[None | Tensor] = -1
+        probability_per_scale_per_phrase: None | Tensor = None
+        scales_list = torch.linspace(0.0, 1.5, 30)
+        for i, scale in enumerate(scales_list):
+            pos_prob = prob_per_scale[i]
+            if (
+                best_scale_for_phrases == -1
+                or pos_prob.max() > probability_per_scale_per_phrase.max()  # type: ignore
+            ):
+                best_scale_for_phrases = scale
+                probability_per_scale_per_phrase = pos_prob
+
+        possibility_array = probability_per_scale_per_phrase.detach().cpu().numpy()  # type: ignore # noqa: E501
+        center, box_size = self.find_cluster(possibility_array)
+        conrners_3d = self.construct_bbox_corners(center, box_size)
+
+        return conrners_3d
+
+    def construct_bbox_corners(self, center, box_size):
+        sx, sy, sz = box_size
+        x_corners = [sx / 2, sx / 2, -sx / 2, -sx / 2, sx / 2, sx / 2, -sx / 2, -sx / 2]
+        y_corners = [sy / 2, -sy / 2, -sy / 2, sy / 2, sy / 2, -sy / 2, -sy / 2, sy / 2]
+        z_corners = [sz / 2, sz / 2, sz / 2, sz / 2, -sz / 2, -sz / 2, -sz / 2, -sz / 2]
+        corners_3d = np.vstack([x_corners, y_corners, z_corners])
+        corners_3d[0, :] = corners_3d[0, :] + center[0]
+        corners_3d[1, :] = corners_3d[1, :] + center[1]
+        corners_3d[2, :] = corners_3d[2, :] + center[2]
+        corners_3d = np.transpose(corners_3d)
+
+        return corners_3d
+
+    def find_cluster(self, probability_over_all_points: np.ndarray):
+        # Calculate the number of top values directly
+        top_count = int(probability_over_all_points.size * 0.005)
+
+        # Find the indices of the top values
+        top_indices = np.argpartition(probability_over_all_points, -top_count)[
+            -top_count:
+        ]
+        logger.info(f"Selected {len(top_indices)} points for clustering.")
+
+        # Fetch related data from the HDF5 dictionary
+        points = self.h5_dict["points"]
+        # origins = self.h5_dict["origins"]
+
+        top_positions = points[top_indices]
+        # top_origins = origins[top_indices]
+        top_values = probability_over_all_points[top_indices].flatten()
+
+        logger.info("Clustering...")
+
+        # Apply DBSCAN clustering
+        dbscan = DBSCAN(eps=0.05, min_samples=15)  # Directly use values where possible
+        clusters = dbscan.fit(top_positions)
+        labels = clusters.labels_
+
+        logger.info(
+            f"Found {len(np.unique(labels)) - 1} clusters."
+        )  # -1 to discount the noise label (-1)
+        # Find the cluster with the point closest to its centroid that has the highest value
+        best_cluster_value = -np.inf
+        best_cluster_id = None
+        for cluster_id in set(labels):
+            if cluster_id == -1:  # Ignore noise
+                continue
+
+            members = top_positions[labels == cluster_id]
+            values_for_members = top_values[labels == cluster_id]
+
+            # Calculate the centroid of the cluster
+            centroid = np.mean(members, axis=0)
+
+            # Compute the distance of all members to the centroid
+            distances_to_centroid = np.linalg.norm(members - centroid, axis=1)
+
+            # Find the index of the member closest to the centroid
+            closest_member_idx = np.argmin(distances_to_centroid)
+
+            # If this member has a better value than the current best, update
+            if values_for_members[closest_member_idx] > best_cluster_value:
+                best_cluster_value = values_for_members[closest_member_idx]
+                best_cluster_id = cluster_id
+        # For the best cluster, compute its centroid, bounding box and other desired values
+        members_of_best_cluster = top_positions[labels == best_cluster_id]
+        # values_for_best_cluster = top_values[labels == best_cluster_id]
+        # origins_for_best_cluster = top_origins[labels == best_cluster_id]
+
+        # Calculate the centroid of the best cluster
+        centroid_of_best = np.mean(members_of_best_cluster, axis=0)
+
+        # Determine the bounding box
+        # min_bounds = np.min(members_of_best_cluster, axis=0)
+        # max_bounds = np.max(members_of_best_cluster, axis=0)
+
+        sx = np.max(members_of_best_cluster[:, 0]) - np.min(
+            members_of_best_cluster[:, 0]
+        )
+        sy = np.max(members_of_best_cluster[:, 1]) - np.min(
+            members_of_best_cluster[:, 1]
+        )
+        sz = np.max(members_of_best_cluster[:, 2]) - np.min(
+            members_of_best_cluster[:, 2]
+        )
+
+        return centroid_of_best, (sx, sy, sz)
+
+    def visual_ground_pipeline_with_gpt(self, json: dict, session_id, str):
+        pass
+
+    def compute_probability_query_property(self, query: str, session: Session):
+        positives = [query]
+        with torch.no_grad():
+            tok_phrases = torch.cat(
+                [self.tokenizer(phrase) for phrase in positives]
+            ).to("cuda")
+            pos_embeds = self.clip_model.encode_text(tok_phrases)
+        scales_list = torch.linspace(0.0, 1.5, 30)
+
+        n_phrases = len(positives)
+        prob_per_scale = []
+        for index, _ in enumerate(scales_list):
+            clip_output = torch.from_numpy(
+                self.h5_dict["clip_embeddings_per_scale"][index]
+            ).to("cuda")
+            # TODO: ensure i = 1
+            for i in range(n_phrases):
+                probs = self.get_relevancy(
+                    embed=clip_output,
+                    positive_id=i,
+                    pos_embeds=pos_embeds,
+                    neg_embeds=self.neg_embeds,
+                    positive_words_length=1,
+                )
+                pos_prob = probs[..., 0:1]
+                # assert torch.sum(pos_prob) == 1
+                prob_per_scale.append(pos_prob)
+
+        return prob_per_scale
+
+    def compute_probability_query_spatial(self, query: str, session: Session):
+        probability_entity = self.compute_probability_query_property(query, session)
+        # find the argmax as the position of the object
+        # top3 position maybe?
+        # how to make this probability?
+
+    def gaussian_distance(self, point1, point2, sigma=1.0):
+        """
+        Compute the Gaussian distance between two 3D points.
+
+        Parameters:
+        - point1, point2: The two points (arrays or lists) between which the distance is to be
+            calculated.
+        - sigma: The width of the Gaussian.
+
+        Returns:
+        - The Gaussian-weighted distance between the two points.
+        """
+        euclidean_distance = np.linalg.norm(np.array(point1) - np.array(point2))
+        return np.exp(-(euclidean_distance**2) / (2 * sigma**2))
+
     def take_picture(
-        self, query: str, session_id: str
+        self, query: str, session: Session
     ) -> tuple[list[ImageRef], str | None]:
         """Returns a list of ImageRef and the path to the grounding result mesh
         file."""
@@ -200,13 +382,13 @@ class PictureTaker:
         ]
 
         lerf_pipelines = [self.lerf_pipeline] * len(camera_poses)
-        session_id_list = [session_id] * len(camera_poses)
+        session_id_list = [session.session_id] * len(camera_poses)
         # camera pose -> render pictures
         picture_paths: Iterator[ImageRef] = self.thread_pool_executor.map(
             lambda tup: PictureTaker.render_picture(*tup),
             (
-                (lerf_pipeline, camera_pose, session_id)
-                for lerf_pipeline, camera_pose, session_id in zip(
+                (lerf_pipeline, camera_pose, session.session_id)
+                for lerf_pipeline, camera_pose, session.session_id in zip(
                     lerf_pipelines, camera_poses, session_id_list
                 )
             ),
@@ -217,7 +399,7 @@ class PictureTaker:
             "Export RGB GLB files drawing 3D bounding boxes overlay on a mesh..."
         )
         mesh_file_path = self.highlight_clusters_in_mesh(
-            session_id=session_id, labels=labels, top_positions=top_positions
+            session_id=session.session_id, labels=labels, top_positions=top_positions
         )
 
         return list(picture_paths), mesh_file_path
@@ -358,6 +540,55 @@ class PictureTakerFactory:
                 scene_configs
             )
         return cls.picture_taker_dict
+
+    @classmethod
+    def get_picture_takers_no_gpt(
+        cls, scene_configs: dict[str, SceneConfig]
+    ) -> dict[str, PictureTaker]:
+        if cls.picture_taker_dict is None:
+            cls.picture_taker_dict = (
+                PictureTakerFactory.initialize_picture_takers_no_gpt(scene_configs)
+            )
+        return cls.picture_taker_dict
+
+    @staticmethod
+    def initialize_picture_takers_no_gpt(
+        scene_configs: dict[str, SceneConfig],
+    ) -> dict[str, PictureTaker]:
+        picture_taker_dict = {}
+        model, _, _ = open_clip.create_model_and_transforms(
+            "ViT-B-16",  # e.g., ViT-B-16
+            pretrained="laion2b_s34b_b88k",  # e.g., laion2b_s34b_b88k
+            precision="fp16",
+        )
+        model.eval()
+        model = model.to("cuda")
+        tokenizer = open_clip.get_tokenizer("ViT-B-16")
+
+        negatives = ["object", "things", "stuff", "texture"]
+        with torch.no_grad():
+            tok_phrases = torch.cat([tokenizer(phrase) for phrase in negatives]).to(
+                "cuda"
+            )
+            neg_embeds = model.encode_text(tok_phrases)
+        neg_embeds /= neg_embeds.norm(dim=-1, keepdim=True)
+        for scene_name, scene_config in scene_configs.items():
+            h5_dict = PictureTakerFactory.load_h5_file(scene_config.load_h5_config)
+            thread_pool_executor = ThreadPoolExecutor(max_workers=Settings.MAX_WORKERS)
+
+            picture_taker_dict[scene_name] = PictureTaker(
+                scene=scene_config.scene_name,
+                scene_config=scene_config,
+                lerf_pipeline=None,
+                h5_dict=h5_dict,
+                clip_model=model,
+                tokenizer=tokenizer,
+                neg_embeds=neg_embeds,
+                negative_words_length=len(negatives),
+                thread_pool_executor=thread_pool_executor,
+            )
+
+        return picture_taker_dict
 
     @staticmethod
     def initialize_picture_takers(

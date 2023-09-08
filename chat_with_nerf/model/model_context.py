@@ -41,6 +41,23 @@ class ModelContextManager:
             cls.model_context = ModelContextManager.initialize_model_context()
         return cls.model_context
 
+    @classmethod
+    def get_model_no_gpt_context(cls) -> ModelContext:
+        if cls.model_context is None:
+            cls.model_context = ModelContextManager.initialize_model_no_gpt_context()
+        return cls.model_context
+
+    @staticmethod
+    def initialize_model_no_gpt_context() -> ModelContext:
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        sys.path.append(project_root)
+        logger.info("Search for all Scenes and Set the current Scene")
+        scene_configs = ModelContextManager.search_scenes(Settings.data_path)
+        picture_taker_dict = PictureTakerFactory.get_picture_takers_no_gpt(
+            scene_configs
+        )
+        return ModelContext(scene_configs, picture_taker_dict, None)
+
     @staticmethod
     def initialize_model_context() -> ModelContext:
         # Get the absolute path of the project's root directory
@@ -69,6 +86,7 @@ class ModelContextManager:
 
         for subdirectory in subdirectories:
             scene_path = (Path(path) / subdirectory / subdirectory).with_suffix(".yaml")
+            logger.info(f"scene_path: {scene_path}")
             with open(scene_path) as f:
                 data = yaml.safe_load(f)
             scene = SceneConfig(

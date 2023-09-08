@@ -14,3 +14,5 @@ session_data/
 notebooks/
 scene_images/
 backup_data/
+data_inthewild/
+.pytest_cache/

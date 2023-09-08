@@ -284,7 +284,7 @@ for x in range(1, 8):  # try 8 times
         demo.queue(
             max_size=20,
             concurrency_count=5,
-            api_open=False,
+            # api_open=False,
         ).launch(
             debug=True,
             server_name="0.0.0.0",

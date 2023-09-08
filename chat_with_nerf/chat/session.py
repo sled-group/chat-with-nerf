@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import uuid
-
+import numpy as np
 import cattrs
 from attrs import define, field
 
@@ -23,6 +23,7 @@ class Session:
     chat_counter: int
     image_id_to_path: dict[int, str] = field(factory=dict)
     grounding_result_mesh_path: str | None = None
+    posterior: np.ndarray | None = None
 
     @classmethod
     def create(cls):

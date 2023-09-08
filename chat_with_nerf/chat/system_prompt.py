@@ -7,6 +7,9 @@ DEFAULT_SYSTEM_PROMPT = """You are a dialog agent that helps users to ground vis
 
 COMMANDS:
 1. Visual grounder: "ground", args: "ground_text": "<ground_text>"
+## TODO: add more
+
+## TODO: should be gone
 2. User dialog: "user_dialog", args: "sentence_to_user": "<sentence_to_user>"
 3. Finish grounding: "finish_grounding", args: "image_id": "<image_id>"
 4. End dialog: "end_dialog", args: "sentence_to_user": "<sentence_to_user>"

@@ -63,6 +63,27 @@ def ground(
     return result
 
 
+def grond_no_gpt(
+    session: Session,
+    ground_text: str,
+    picture_taker: PictureTaker,
+):
+    bbox = VisualGrounder.call_visual_grounder_no_gpt(
+        session, ground_text, picture_taker
+    )
+    return bbox
+
+
+def ground_no_gpt_with_callback(
+    session: Session,
+    ground_text: str,
+    picture_taker: PictureTaker,
+    callback: Callable[[list[tuple[str, str]] | None, Session], None],
+):
+    bbox = grond_no_gpt(session, ground_text, picture_taker)
+    callback(bbox, session)
+
+
 def ground_with_callback(
     session: Session,
     dropdown_scene: str,
