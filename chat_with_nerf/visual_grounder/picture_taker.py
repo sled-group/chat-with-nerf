@@ -117,11 +117,11 @@ class PictureTaker:
                 best_scale_for_phrases = scale
                 probability_per_scale_per_phrase = pos_prob
 
-        possibility_array = probability_per_scale_per_phrase.detach().cpu().numpy()  # type: ignore # noqa: E501
+        possibility_array = probability_per_scale_per_phrase.detach().cpu().numpy().squeeze()  # type: ignore # noqa: E501
         center, box_size = self.find_cluster(possibility_array)
         conrners_3d = self.construct_bbox_corners(center, box_size)
 
-        return conrners_3d
+        return (center, box_size), conrners_3d
 
     def construct_bbox_corners(self, center, box_size):
         sx, sy, sz = box_size
@@ -139,31 +139,25 @@ class PictureTaker:
     def find_cluster(self, probability_over_all_points: np.ndarray):
         # Calculate the number of top values directly
         top_count = int(probability_over_all_points.size * 0.005)
-
+        # print(top_count)
+        # print(probability_over_all_points.size)
         # Find the indices of the top values
         top_indices = np.argpartition(probability_over_all_points, -top_count)[
             -top_count:
         ]
-        logger.info(f"Selected {len(top_indices)} points for clustering.")
-
         # Fetch related data from the HDF5 dictionary
-        points = self.h5_dict["points"]
+        points = self.h5_dict["points_scannet"]
         # origins = self.h5_dict["origins"]
 
         top_positions = points[top_indices]
         # top_origins = origins[top_indices]
         top_values = probability_over_all_points[top_indices].flatten()
 
-        logger.info("Clustering...")
-
         # Apply DBSCAN clustering
         dbscan = DBSCAN(eps=0.05, min_samples=15)  # Directly use values where possible
         clusters = dbscan.fit(top_positions)
         labels = clusters.labels_
 
-        logger.info(
-            f"Found {len(np.unique(labels)) - 1} clusters."
-        )  # -1 to discount the noise label (-1)
         # Find the cluster with the point closest to its centroid that has the highest value
         best_cluster_value = -np.inf
         best_cluster_id = None
@@ -221,6 +215,7 @@ class PictureTaker:
                 [self.tokenizer(phrase) for phrase in positives]
             ).to("cuda")
             pos_embeds = self.clip_model.encode_text(tok_phrases)
+        pos_embeds /= pos_embeds.norm(dim=-1, keepdim=True)
         scales_list = torch.linspace(0.0, 1.5, 30)
 
         n_phrases = len(positives)
@@ -646,9 +641,11 @@ class PictureTakerFactory:
 
     @staticmethod
     def load_h5_file(load_config: str) -> dict:
+        print(load_config)
         hdf5_file = h5py.File(load_config, "r")
         # batch_idx = 5
-        points = hdf5_file["points"]["points"][:]
+        points_nerfstudio = hdf5_file["points_nerfstudio"]["points_nerfstudio"][:]
+        points_scannet = hdf5_file["points_scannet"]["points_scannet"][:]
         origins = hdf5_file["origins"]["origins"][:]
         directions = hdf5_file["directions"]["directions"][:]
 
@@ -661,7 +658,8 @@ class PictureTakerFactory:
         rgb = hdf5_file["rgb"]["rgb"][:]
         hdf5_file.close()
         h5_dict = {
-            "points": points,
+            "points_nerfstudio": points_nerfstudio,
+            "points_scannet": points_scannet,
             "origins": origins,
             "directions": directions,
             "clip_embeddings_per_scale": clip_embeddings_per_scale,
