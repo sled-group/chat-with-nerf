@@ -53,6 +53,27 @@ Then locally you need to run
 ```bash
 git clone https://github.com/sled-group/chat-with-nerf.git
 ```
+
+
+Download and construct the [llava-13b-v0](https://huggingface.co/liuhaotian/LLaVA-13b-delta-v0) checkpoint (see [LLaVA's documentation on how to construct the checkpoint](https://github.com/haotian-liu/LLaVA/tree/8b21169def6c8ed57afa5e7bf790c1a91b530940#llava-13b)). Then assuming you store the constructed `llava-13b-v0` checkpoint under `<my_path_to_llava>/llava-13b-v0`, move the checkpoint to `/chat-with-nerf/pre-trained-weights/LLaVA`. 
+```
+cd chat-with-nerf
+mkdir -p pre-trained-weights/LLaVA
+cd pre-trained-weights/LLaVA
+mv <my_path_to_llava>/llava-13b-v0 .
+```
+
+Alternatively, you can supply a different version of LLaVA checkpoint and change `LLAVA_PATH`'s value in `chat_with_nerf/settings.py`:
+```
+    LLAVA_PATH = "/workspace/pre-trained-weights/LLaVA/<my_llava_checkpoint>"
+```
+
+Open up your directory's permission for the docker container:
+```
+cd <parent_path_chat-with-nerf>
+chmod -R 777 .
+```
+
 If using Docker, you can use the following command to spin up a docker container with **chat-with-nerf** mounted under workspace
 ```bash
 docker run --gpus "device=0" -v /<parent_path_chat-with-nerf>/:/workspace/ -v /home/<your_username>/.cache/:/home/user/.cache/ --rm -it --shm-size=12gb chat-with-nerf:latest
