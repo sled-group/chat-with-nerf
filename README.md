@@ -1,6 +1,7 @@
 # :camera_flash: Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog
 
 [![Project](https://img.shields.io/badge/Project-Page-20B2AA.svg)](https://chat-with-nerf.github.io/)
+[![Video](https://img.shields.io/badge/YouTube-Video-red)](https://youtu.be/eO-Vaf-1R1s)
 [![Demo](https://img.shields.io/badge/Website-Demo-ff69b4.svg)](http://sled-whistler.eecs.umich.edu:7777/)
 [![Embark](https://img.shields.io/badge/Discord-Chat--with--NeRF-%237289da.svg?logo=discord)](https://discord.gg/8rT4GpRq9g)
 [![WeChat badge](https://img.shields.io/badge/WeChat-Join-brightgreen?logo=wechat&amp)](https://i.ibb.co/kBSCWsD/IMG-6239.jpg)
