@@ -1,4 +1,3 @@
-import json
 import os
 import threading
 import time
@@ -7,12 +6,16 @@ from collections import defaultdict
 from collections.abc import Generator
 import numpy as np
 import requests
+import json5
+import traceback
 from requests import Response
-
+from chat_with_nerf.chat.util import fix_brackets
 from chat_with_nerf import logger
 from chat_with_nerf.chat.grounder import (
     ground_with_callback,
     ground_no_gpt_with_callback,
+    ground_with_callback_with_gpt,
+    highlight_clusters_in_mesh,
 )
 from chat_with_nerf.chat.session import Session
 from chat_with_nerf.model.model_context import ModelContext, ModelContextManager
@@ -26,14 +29,22 @@ class Agent:
     API_URL: str = attr.field(default=str(os.getenv("API_URL")))
     OPENAI_API_KEY: str = attr.field(default=str(os.getenv("OPENAI_API_KEY")))
     MAX_ITERATION: int = 10
+    scene_name: str = attr.field(default="scene0025_00")
 
     def __attrs_post_init__(self):
         # Check for fake grounder
+        if self.scene_name is None:
+            raise ValueError("default scene_name is not set")
+
         if not Settings.USE_FAKE_GROUNDER:
             if Settings.NO_GPT:
-                self.model_context = ModelContextManager.get_model_no_gpt_context()
+                self.model_context = ModelContextManager.get_model_no_gpt_context(
+                    self.scene_name
+                )
             else:
-                self.model_context = ModelContextManager.get_model_context()
+                self.model_context = (
+                    ModelContextManager.get_model_no_visual_feedback_openscene_context()
+                )
         else:
             self.model_context = ModelContext(
                 scene_configs=None,
@@ -50,18 +61,19 @@ class Agent:
             raise ValueError("OPENAI_API_KEY environment variable is not set")
 
     def display_grounder_results(
-        self, grounder_results: list[tuple[str, str]], session: Session
+        self, grounder_results: dict, session: Session
     ) -> tuple[list[tuple[None, str]], str]:
         """Display grounder results in markdown format."""
-        str_for_user = ""
-        pure_text_for_gpt = ""
-        for i, (img_path, caption) in enumerate(grounder_results):
-            str_for_user += f"Image {i+1}: {caption}\n ![{caption}](file={img_path})\n"
-            pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
-            # record the image_id to image path mapping in session
-            session.image_id_to_path[i + 1] = img_path
+        str_for_user = str(grounder_results)
+        pure_text_for_gpt = str(grounder_results)
+        # for i, (img_path, caption) in enumerate(grounder_results):
+        #     str_for_user += f"Image {i+1}: {caption}\n ![{caption}](file={img_path})\n"
+        #     pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
+        #     # record the image_id to image path mapping in session
+        #     session.image_id_to_path[i + 1] = img_path
         logger.info(f"pure_text_for_gpt: {pure_text_for_gpt}")
-        chatbot_msg_for_user = [(None, str_for_user)]
+        chatbot_msg_for_user = [(None, None)]
+        # chatbot_msg_for_user = [(None, str_for_user)]
         return chatbot_msg_for_user, pure_text_for_gpt
 
     def ask_gpt(
@@ -76,7 +88,7 @@ class Agent:
             "Content-Type": "application/json",
             "api-key": self.OPENAI_API_KEY,
         }
-
+        # find base mesh path
         if system_msg.strip() == "":
             initial_message = [
                 {"role": "user", "content": f"{inputs}"},
@@ -166,11 +178,11 @@ class Agent:
                 elif (
                     len(chunk) > 12
                     and chunk.startswith("data:")
-                    and "content" in json.loads(chunk[6:])["choices"][0]["delta"]
+                    and "content" in json5.loads(chunk[6:])["choices"][0]["delta"]
                 ):
                     partial_words = (
                         partial_words
-                        + json.loads(chunk[6:])["choices"][0]["delta"]["content"]
+                        + json5.loads(chunk[6:])["choices"][0]["delta"]["content"]
                     )
 
                     session.chat_history_for_llm[-1] = (
@@ -261,6 +273,9 @@ class Agent:
     ) -> Generator[
         tuple[list[tuple], int, str | None, Session, str | None], None, None
     ]:
+        session.base_mesh_path = self.model_context.scene_configs[
+            dropdown_scene
+        ].load_mesh
         session.chat_history_for_display.append(
             (inputs, "")
         )  # append in a tuple format, first is user input, second is assistant response
@@ -271,8 +286,8 @@ class Agent:
             session,
             session.grounding_result_mesh_path,
         )
-
-        retry_sleep_time = 0.5
+        session.working_scene_name = dropdown_scene
+        retry_sleep_time = 0.1
         give_control_to_user = False
         for _ in range(
             self.MAX_ITERATION
@@ -324,9 +339,10 @@ class Agent:
                         time.sleep(retry_sleep_time)
                         retry_sleep_time *= 2  # exponential backoff
                         continue
-            except ValueError:
+            except ValueError as exp:
                 # sometimes GPT returns "The server is currently overloaded with other requests."
                 # no need to modify the chat_history_for_llm in this case, simply re-issue the request
+                print(exp)
                 time.sleep(retry_sleep_time)
                 retry_sleep_time *= 2  # exponential backoff
                 yield (
@@ -340,18 +356,19 @@ class Agent:
 
             # done streaming
             try:
-                gpt_response_json = json.loads(session.chat_history_for_llm[-1][1])
-            except json.decoder.JSONDecodeError as e:
+                gpt_response_json_fixed = fix_brackets(
+                    session.chat_history_for_llm[-1][1]
+                )
+                gpt_response_json = json5.loads(gpt_response_json_fixed)
+            except Exception as exp:
                 # if reaches here, then it means GPT-4 indeed returned a non-JSON response
                 logger.error(
                     f"Cannot decode GPT response: {session.chat_history_for_llm[-1][1]}. "
-                    "Asking GPT to retry."
+                    f"Asking GPT to retry. Exception: {exp}"
                 )
-                # need to modify the chat_history_for_llm in this case
-                # so that the LLM knows it has made a mistake
                 inputs = (
                     "SYSTEM: The above response caused an error: "
-                    f"type: {type(e)}, msg: {str(e)}. Please retry."
+                    f"type: {type(exp)}, msg: {str(exp)}. Please retry."
                 )
                 # GPT often returns an empty response and causing a JSONDecodeError
                 # because there were too many requests,
@@ -377,6 +394,7 @@ class Agent:
                 )
 
                 # controller logic to decide what to do next
+                print("gpt_response_json: ", gpt_response_json)
                 if gpt_response_json["command"]["name"] == "user_dialog":
                     sentence_to_user = gpt_response_json["command"]["args"][
                         "sentence_to_user"
@@ -387,7 +405,6 @@ class Agent:
                     give_control_to_user = True
                 elif gpt_response_json["command"]["name"] == "ground":
                     # first display what GPT wants to tell the user
-                    ## TODO: ground
                     session.chat_history_for_display.append(
                         (
                             None,
@@ -402,9 +419,9 @@ class Agent:
                         session.grounding_result_mesh_path,
                     )
 
-                    # now start the grounding process
-                    ground_text = gpt_response_json["command"]["args"]["ground_text"]
-
+                    ground_json = gpt_response_json["command"]["args"]["ground_json"]
+                    print("ground text: ", ground_json)
+                    session.grounding_query = ground_json["target"]["phrase"]
                     # use a separate thread to do grounding since it takes a while
                     grounder_returned_chatbot_msg = None
 
@@ -428,72 +445,110 @@ class Agent:
                         )
                         inputs = pure_text_for_gpt
                         give_control_to_user = False
+                        print("$" * 100)
+                        print(inputs)
+                        print("$" * 100)
                         # this must be last line to ensure thread safety
                         grounder_returned_chatbot_msg = chatbot_msg_for_user
 
-                    threading.Thread(
-                        target=ground_with_callback,
+                    thread = threading.Thread(
+                        target=ground_with_callback_with_gpt,
                         args=(
                             session,
                             dropdown_scene,
-                            ground_text,
+                            ground_json,
                             self.model_context.picture_takers[dropdown_scene],
                             self.model_context.captioner,
                             grounding_callback,
                         ),
-                    ).start()
+                    )
+                    thread.start()
 
                     # while grounder is running, display a loading message
                     dot_counter = 0
                     first_iteration = True
                     while grounder_returned_chatbot_msg is None:
-                        dot_counter = (dot_counter + 1) % 4
-                        dots = "." * dot_counter
-                        if first_iteration:
-                            session.chat_history_for_display.append(
-                                (None, f"**SYSTEM: I'm thinking{dots}**")
+                        if thread.is_alive():
+                            dot_counter = (dot_counter + 1) % 4
+                            dots = "." * dot_counter
+                            if first_iteration:
+                                session.chat_history_for_display.append(
+                                    (None, f"**SYSTEM: I'm thinking{dots}**")
+                                )
+                                first_iteration = False
+                            else:
+                                session.chat_history_for_display[-1] = (
+                                    None,
+                                    f"**SYSTEM: I'm thinking{dots}**",
+                                )
+                            yield (
+                                session.chat_history_for_display,
+                                session.chat_counter,
+                                get_status_code_and_reason(response),
+                                session,
+                                session.grounding_result_mesh_path,
                             )
-                            first_iteration = False
+                            time.sleep(1)  # Adjust the sleep duration as needed
                         else:
-                            session.chat_history_for_display[-1] = (
-                                None,
-                                f"**SYSTEM: I'm thinking{dots}**",
+                            raise ValueError(
+                                "Grounding thread exited before callback was called."
                             )
-                        yield (
-                            session.chat_history_for_display,
-                            session.chat_counter,
-                            get_status_code_and_reason(response),
-                            session,
-                            session.grounding_result_mesh_path,
-                        )
-                        time.sleep(1)  # Adjust the sleep duration as needed
 
                     session.chat_history_for_display.extend(
                         grounder_returned_chatbot_msg
                     )
 
                 elif gpt_response_json["command"]["name"] == "finish_grounding":
-                    image_ids = gpt_response_json["command"]["args"]["image_id"]
-                    logger.debug(
-                        f"session.image_id_to_path: {session.image_id_to_path}"
-                    )
-                    if type(image_ids) == int:
-                        img_id_list = [image_ids]
-                    elif type(image_ids) == str:
-                        img_id_list = [int(i) for i in image_ids.split(", ")]
-                    elif type(image_ids) == list:
-                        img_id_list = image_ids
+                    top_1_object_id = gpt_response_json["command"]["args"][
+                        "top_1_object_id"
+                    ]
+                    top_5_object2scores = gpt_response_json["command"]["args"][
+                        "top_5_objects_scores"
+                    ]
+                    # logger.debug(
+                    #     f"session.image_id_to_path: {session.image_id_to_path}"
+                    # )
+                    if isinstance(top_1_object_id, int):
+                        img_id_list = [top_1_object_id]
+                    elif isinstance(top_1_object_id, str):
+                        img_id_list = [int(i) for i in top_1_object_id.split(", ")]
+                    elif isinstance(top_1_object_id, list):
+                        img_id_list = top_1_object_id
 
-                    markdown_to_display = (
-                        f"**SYSTEM: Grounding finished. Image id: {image_ids}**\n"
-                    )
+                    assert len(img_id_list) == 1
+                    session.chosen_candidate_id = img_id_list[0]
+                    session.top_5_objects2scores = top_5_object2scores
 
-                    for img_id in img_id_list:
+                    # TODO: draw bounding box and mesh right here
+                    mesh_file_path = highlight_clusters_in_mesh(
+                        session, self.model_context.picture_takers[dropdown_scene].mesh
+                    )
+                    session.grounding_result_mesh_path = mesh_file_path
+                    ## TODO: how to get the correct mesh display?
+                    if not session.working_scene_name.startswith("s"):
+                        path2images = self.model_context.picture_takers[
+                            dropdown_scene
+                        ].take_picture_for_the_ground_result(session, img_id_list[0])
+                        markdown_to_display = ""
                         markdown_to_display += (
-                            f"![caption](file={session.image_id_to_path[img_id]})"
+                            " **Top Candidates with corresponding novel view: **  \n"
                         )
-                    session.chat_history_for_display.append((None, markdown_to_display))
-                    give_control_to_user = True
+
+                        for i, path2image in enumerate(path2images):
+                            markdown_to_display += (
+                                f" ![caption](file={path2image.rgb_address}) \n\n"
+                            )
+
+                        last_message = f"**SYSTEM: Grounding finished. Ground Object id: {img_id_list[0]}**\n"
+                        session.chat_history_for_display.append((None, last_message))
+                        session.chat_history_for_display.append(
+                            (None, markdown_to_display)
+                        )
+                        give_control_to_user = True
+                    else:
+                        last_message = f"**SYSTEM: Grounding finished. Ground Object id: {img_id_list[0]}**\n"
+                        session.chat_history_for_display.append((None, last_message))
+                        give_control_to_user = True
                 elif gpt_response_json["command"]["name"] == "end_dialog":
                     session.chat_history_for_display.append(
                         (None, gpt_response_json["thoughts"]["speak"])
@@ -511,21 +566,30 @@ class Agent:
                     session.grounding_result_mesh_path,
                 )
 
-            except Exception as e:
+            except Exception as exp:
                 logger.error(
-                    f"An error occured: type: {type(e)}, msg: {str(e)}. Asking GPT to retry."
+                    f"An error occured: type: {type(exp)}, msg: {traceback.format_exc()}. Please check."
+                )
+                logger.error(
+                    f"An error occured: type: {type(exp)}, msg: {str(exp)}. Asking GPT to retry."
                 )
                 # need to modify the chat_history_for_llm in this case
                 # so that the LLM knows it has made a mistake
                 inputs = (
                     "SYSTEM: The above response caused an error: "
-                    f"type: {type(e)}, msg: {str(e)}. Please retry."
+                    f"type: {type(exp)}, msg: {str(exp)}. Please retry."
                 )
                 continue
 
-        # update and save session state
-        session.save()
         yield (
+            session.chat_history_for_display,
+            session.chat_counter,
+            get_status_code_and_reason(response),
+            session,
+            session.grounding_result_mesh_path,
+        )
+
+        return (
             session.chat_history_for_display,
             session.chat_counter,
             get_status_code_and_reason(response),
