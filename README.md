@@ -94,6 +94,13 @@ cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ```
 
+Extracting openscene embeddings
+
+For extracting the openscene embeddings, we followed the instructions listed in Openscene github repository, in particular Run Section.
+```
+https://github.com/pengsongyou/openscene#run
+```
+
 ## Related Work
 - [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
 - [LERF](https://github.com/kerrj/lerf)
