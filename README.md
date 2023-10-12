@@ -94,6 +94,14 @@ cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ```
 
+##### Extracting openscene embeddings
+
+For extracting the openscene embeddings, we used the pre-trained Distillation model checkpoint, shared by the Openscene Authors for generating the representation. To generate the corresponding representations, kindly refer to the guidelines provided in the Openscene GitHub repository, specifically focusing on the Data Preparation and Run Sections.
+```
+https://github.com/pengsongyou/openscene#data-preparation
+https://github.com/pengsongyou/openscene#run
+```
+
 ## Related Work
 - [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
 - [LERF](https://github.com/kerrj/lerf)
