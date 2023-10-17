@@ -167,8 +167,6 @@ def highlight_clusters_in_mesh(session, mesh) -> str:
     else:
         mesh_file_path = os.path.join(output_path, f"{session.session_id}.glb")
 
-    # TODO: fix this!
-    # mesh = o3d.io.read_triangle_mesh(session.base_mesh_path)
     candidates = session.candidate_visualization
     landmark = session.landmark_visualization
     top_5_objects2scores = session.top_5_objects2scores

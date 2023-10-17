@@ -41,26 +41,24 @@ class ModelContextManager:
 
     @classmethod
     def get_model_no_gpt_context(cls, scene_name) -> ModelContext:
-        # if cls.model_context is None:
-        #     cls.model_context = ModelContextManager.initialize_model_no_gpt_context(
-        #         scene_name
-        #     )
-        return ModelContextManager.initialize_model_no_gpt_context(scene_name)
+        if cls.model_context is None:
+            cls.model_context = ModelContextManager.initialize_model_no_gpt_context(
+                scene_name
+            )
+        return cls.model_context
 
     @classmethod
     def get_model_no_visual_feedback_context(cls, scene_name) -> ModelContext:
-        # if cls.model_context is None:
-        #     cls.model_context = (
-        #         ModelContextManager.initialize_model_no_visual_feedback_context(
-        #             scene_name
-        #         )
-        #     )
-        return ModelContextManager.initialize_model_no_visual_feedback_context(
-            scene_name
-        )
+        if cls.model_context is None:
+            cls.model_context = (
+                ModelContextManager.initialize_model_no_visual_feedback_context(
+                    scene_name
+                )
+            )
+        return cls.model_context
 
     @classmethod
-    def get_model_no_visual_feedback_openscene_context(cls) -> ModelContext:
+    def get_model_context_with_gpt(cls) -> ModelContext:
         if cls.model_context is None:
             cls.model_context = (
                 ModelContextManager.initialize_model_no_visual_feedback_openscene_context()
@@ -120,9 +118,6 @@ class ModelContextManager:
         scene_configs = ModelContextManager.search_scenes(
             Settings.data_path, scene_name
         )
-
-        # logger.info("Initialize Captioner")
-        # captioner = ModelContextManager.initiaze_llava_captioner()
 
         logger.info("Initialize picture_taker for all scenes")
         picture_taker_dict = PictureTakerFactory.get_picture_takers(scene_configs)

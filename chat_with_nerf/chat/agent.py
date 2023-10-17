@@ -42,9 +42,7 @@ class Agent:
                     self.scene_name
                 )
             else:
-                self.model_context = (
-                    ModelContextManager.get_model_no_visual_feedback_openscene_context()
-                )
+                self.model_context = ModelContextManager.get_model_context_with_gpt()
         else:
             self.model_context = ModelContext(
                 scene_configs=None,
@@ -64,16 +62,9 @@ class Agent:
         self, grounder_results: dict, session: Session
     ) -> tuple[list[tuple[None, str]], str]:
         """Display grounder results in markdown format."""
-        str_for_user = str(grounder_results)
         pure_text_for_gpt = str(grounder_results)
-        # for i, (img_path, caption) in enumerate(grounder_results):
-        #     str_for_user += f"Image {i+1}: {caption}\n ![{caption}](file={img_path})\n"
-        #     pure_text_for_gpt += f"Grounder returned:\nImage {i+1}: {caption}\n"
-        #     # record the image_id to image path mapping in session
-        #     session.image_id_to_path[i + 1] = img_path
         logger.info(f"pure_text_for_gpt: {pure_text_for_gpt}")
         chatbot_msg_for_user = [(None, None)]
-        # chatbot_msg_for_user = [(None, str_for_user)]
         return chatbot_msg_for_user, pure_text_for_gpt
 
     def ask_gpt(
@@ -505,9 +496,6 @@ class Agent:
                     top_5_object2scores = gpt_response_json["command"]["args"][
                         "top_5_objects_scores"
                     ]
-                    # logger.debug(
-                    #     f"session.image_id_to_path: {session.image_id_to_path}"
-                    # )
                     if isinstance(top_1_object_id, int):
                         img_id_list = [top_1_object_id]
                     elif isinstance(top_1_object_id, str):
@@ -519,12 +507,11 @@ class Agent:
                     session.chosen_candidate_id = img_id_list[0]
                     session.top_5_objects2scores = top_5_object2scores
 
-                    # TODO: draw bounding box and mesh right here
                     mesh_file_path = highlight_clusters_in_mesh(
                         session, self.model_context.picture_takers[dropdown_scene].mesh
                     )
                     session.grounding_result_mesh_path = mesh_file_path
-                    ## TODO: how to get the correct mesh display?
+
                     if not session.working_scene_name.startswith("s"):
                         path2images = self.model_context.picture_takers[
                             dropdown_scene
