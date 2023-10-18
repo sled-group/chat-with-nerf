@@ -34,7 +34,7 @@ dependencies = [
     "torch",
     "Pillow>=9.5.0",
     "torchtyping",
-    "nerfstudio<=0.2.1",
+    "nerfstudio>=0.3.0",
     "lerf>=0.1.0",
     "cattrs",
     "types-requests",

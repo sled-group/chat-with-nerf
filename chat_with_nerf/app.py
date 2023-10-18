@@ -1,5 +1,6 @@
 # Adapted from https://huggingface.co/spaces/ysharma/ChatGPT4
 
+from collections import OrderedDict
 import os
 from signal import SIGTERM
 from time import sleep
@@ -7,11 +8,24 @@ from time import sleep
 import gradio as gr
 from psutil import process_iter
 
-from chat_with_nerf.chat import agent
+from chat_with_nerf.chat.agent import Agent
 from chat_with_nerf.chat.session import Session
-from chat_with_nerf.chat.system_prompt import DEFAULT_SYSTEM_PROMPT
+from chat_with_nerf.chat.system_prompt import (
+    SINGLE_TURN_MODE_SYSTEM_PROMPT,
+    INTERACTIVE_MODE_SYSTEM_PROMPT,
+)
 from chat_with_nerf.settings import Settings
 from chat_with_nerf.util import list_dirs
+
+scene_name = "home_1"
+agent = Agent(scene_name="home_1")
+default_system_msg = INTERACTIVE_MODE_SYSTEM_PROMPT
+prompt_mapping = OrderedDict(
+    [
+        ("Interactive Mode", INTERACTIVE_MODE_SYSTEM_PROMPT),  # the default
+        ("Single-Turn Mode", SINGLE_TURN_MODE_SYSTEM_PROMPT),
+    ]
+)
 
 
 # Resetting to blank
@@ -33,22 +47,31 @@ def set_interactive_false():
     return gr.update(interactive=False)
 
 
-def change_scene(
-    dropdown_scene: str,
-) -> tuple[str, str | None, list, int, str | None, Session]:
+def change_scene_or_system_prompt(
+    dropdown_scene_selection: str, dropdown_conversation_mode_selection: str
+) -> str:
     # reset model_3d, chatbot_for_display, chat_counter, server_status_code
-    new_session = Session.create_for_scene(dropdown_scene)
+    new_session = Session.create_for_scene(dropdown_scene_selection)
+    new_session.working_scene_name = dropdown_scene_selection
+    agent.scene_name = dropdown_scene_selection
+    file_name = (
+        "scene_for_gradio_v7.obj"
+        if dropdown_scene_selection.startswith("s")
+        else "poly.glb"
+    )
+
     return (
-        os.path.join(Settings.data_path, dropdown_scene, "poly.glb"),
+        os.path.join(Settings.data_path, dropdown_scene_selection, file_name),
         None,
         new_session.chat_history_for_display,
         new_session.chat_counter,
         None,
         new_session,
+        prompt_mapping[dropdown_conversation_mode_selection],
     )
 
 
-title = """<h1 align="center">🔥 Chat with NeRF using GPT-4 🚀</h1>
+title = """<h1 align="center">🔥 LLM-Grounder with GPT-4 🚀</h1>
 <p><center>
 <a href="https://chat-with-nerf.github.io/" target="_blank">[Project Page]</a>
 <a href="https://github.com/sled-group/chat-with-nerf" target="_blank">[Code]</a>
@@ -74,8 +97,6 @@ system_msg_info = (
     "For example, the assistant could be instructed with 'You are a helpful assistant."
 )
 
-default_system_msg = DEFAULT_SYSTEM_PROMPT
-
 # Modifying existing Gradio Theme
 theme = gr.themes.Soft(
     primary_hue="zinc",
@@ -94,14 +115,23 @@ with gr.Blocks() as demo:
                 # GPT4 API Key is provided by Huggingface
                 dropdown_scene = gr.Dropdown(
                     choices=list_dirs(Settings.data_path),
-                    value="home_1",
+                    value=f"{scene_name}",
                     interactive=True,
                     label="Select a scene",
                 )
                 model_3d = gr.Model3D(
-                    value=Settings.data_path + "/home_1" + "/poly.glb",
+                    value=Settings.data_path
+                    + f"/{scene_name}"
+                    + (
+                        "/scene_for_gradio_v7.obj"
+                        if scene_name.startswith("s")
+                        else "/poly.glb"
+                    ),
+                    # value=Settings.data_path + f"/{scene_name}" + "/poly.glb",
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="3D Model",
+                    camera_position=(-50, 65, 10),
+                    zoom_speed=10.0,
                 )
                 gr.HTML(
                     """<center><strong>
@@ -113,15 +143,31 @@ with gr.Blocks() as demo:
                 gr.HTML(
                     """<center><strong>
                     👇 When grounding finishes,
-                    a green bounding sphere will appear around the object of interest.
+                    the grounding result will be displayed below.
                     </strong></center>
                     """
                 )
                 model_3d_grounding_result = gr.Model3D(
                     clear_color=[0.0, 0.0, 0.0, 0.0],
                     label="Grounding Result",
+                    # camera_position=(90, 110, 10),
+                    zoom_speed=15.0,
+                )
+                gr.HTML(
+                    """<center><strong>
+                    <div style="display:inline-block; color:blue">&#9632;</div> = Landmark &nbsp;
+                    <div style="display:inline-block; color:red">&#9632;</div> = Candidates &nbsp;
+                    <div style="display:inline-block; color:green">&#9632;</div> = Chosen Candidate
+                    </strong></center>
+                    """
                 )
             with gr.Column(scale=5):
+                dropdown_conversation_mode = gr.Dropdown(
+                    choices=list(prompt_mapping.keys()),
+                    value=list(prompt_mapping.keys())[0],
+                    interactive=True,
+                    label="Select conversation mode",
+                )
                 with gr.Row():
                     # openai_api_key = gr.Textbox(
                     #     label=(
@@ -135,12 +181,14 @@ with gr.Blocks() as demo:
                         label=f"Turn count (free trial limit: {Settings.MAX_TURNS})",
                     )
                     server_status_code = gr.Textbox(
-                        label="Status code from OpenAI server", interactive=False
+                        label="Status code from GPT server", interactive=False
                     )
                 chat_history_for_display = gr.Chatbot(
                     value=[(None, Settings.INITIAL_MSG_FOR_DISPLAY)],
                     label="Chat Assistant",
-                ).style(height="600")
+                    scroll_to_output=True,
+                    height=600,
+                )
                 with gr.Row():
                     with gr.Column(scale=8):
                         user_chat_input = gr.Textbox(
@@ -169,15 +217,12 @@ with gr.Blocks() as demo:
                             inputs=user_chat_input,
                         )
 
-        with gr.Accordion(label="System instruction:", open=False, visible=False):
+        with gr.Accordion(label="System instruction:", open=False, visible=True):
             system_msg = gr.Textbox(
-                label="Instruct the AI Assistant to set its beaviour",
+                label="🚧 System Prompt",
                 info=system_msg_info,
                 value=default_system_msg,
-            )
-            accordion_msg = gr.HTML(
-                value="🚧 To set System message you will have to refresh the app",
-                visible=False,
+                height=600,
             )
         # top_p, temperature
         with gr.Accordion("Parameters", open=False, visible=False):
@@ -200,14 +245,14 @@ with gr.Blocks() as demo:
     gr.Markdown("### Terms of Service")
     gr.HTML(
         """By using this service, users are required to agree to the following terms:
-The service is a research preview intended for non-commercial use only.
-The service may collect user dialogue data for future research."""
+            The service is a research preview intended for non-commercial use only.
+            The service may collect user dialogue data for future research."""
     )
 
     # Event handling
     dropdown_scene.change(
-        fn=change_scene,
-        inputs=[dropdown_scene],
+        fn=change_scene_or_system_prompt,
+        inputs=[dropdown_scene, dropdown_conversation_mode],
         outputs=[
             model_3d,
             model_3d_grounding_result,
@@ -215,11 +260,12 @@ The service may collect user dialogue data for future research."""
             chat_counter,
             server_status_code,
             session_state,
+            system_msg,
         ],
     )
     clear_button.click(
-        fn=change_scene,
-        inputs=[dropdown_scene],
+        fn=change_scene_or_system_prompt,
+        inputs=[dropdown_scene, dropdown_conversation_mode],
         outputs=[
             model_3d,
             model_3d_grounding_result,
@@ -227,6 +273,7 @@ The service may collect user dialogue data for future research."""
             chat_counter,
             server_status_code,
             session_state,
+            system_msg,
         ],
     )
     user_chat_input.submit(
@@ -265,18 +312,29 @@ The service may collect user dialogue data for future research."""
             model_3d_grounding_result,
         ],
     )  # openai_api_key
+    dropdown_conversation_mode.change(
+        fn=change_scene_or_system_prompt,
+        inputs=[dropdown_scene, dropdown_conversation_mode],
+        outputs=[
+            model_3d,
+            model_3d_grounding_result,
+            chat_history_for_display,
+            chat_counter,
+            server_status_code,
+            session_state,
+            system_msg,
+        ],
+    )
 
     user_chat_input.submit(set_interactive_false, [], [system_msg])
     send_button.click(set_interactive_false, [], [system_msg])
-    user_chat_input.submit(set_visible_true, [], [accordion_msg])
-    send_button.click(set_visible_true, [], [accordion_msg])
 
     send_button.click(reset_textbox, [], [user_chat_input])
     user_chat_input.submit(reset_textbox, [], [user_chat_input])
 
-
+# TODO: optimize
 sleep_time = 2
-port = 7777
+port = 7011
 for x in range(1, 8):  # try 8 times
     try:
         # put your logic here
@@ -284,7 +342,7 @@ for x in range(1, 8):  # try 8 times
         demo.queue(
             max_size=20,
             concurrency_count=5,
-            api_open=False,
+            # api_open=False,
         ).launch(
             debug=True,
             server_name="0.0.0.0",
