@@ -1,10 +1,10 @@
 # :camera_flash: Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog
 
 [![Project](https://img.shields.io/badge/Project-Page-20B2AA.svg)](https://chat-with-nerf.github.io/)
+[![Paper](https://img.shields.io/badge/arXiv-Paper-red.svg)]([https://chat-with-nerf.github.io/](https://arxiv.org/abs/2309.12311))
 [![Video](https://img.shields.io/badge/YouTube-Video-red)](https://youtu.be/eO-Vaf-1R1s)
 [![Demo](https://img.shields.io/badge/Website-Demo-ff69b4.svg)](http://sled-whistler.eecs.umich.edu:7777/)
 [![Embark](https://img.shields.io/badge/Discord-Chat--with--NeRF-%237289da.svg?logo=discord)](https://discord.gg/8rT4GpRq9g)
-[![WeChat badge](https://img.shields.io/badge/WeChat-Join-brightgreen?logo=wechat&amp)](https://i.ibb.co/kBSCWsD/IMG-6239.jpg)
 
 
 ![Demo of Chat-with-NeRF](https://github.com/sled-group/chat-with-nerf/assets/12980222/6a327112-abbd-4b6a-ba22-e7e254a7fe6c "Overview")
@@ -13,10 +13,12 @@
 ## :bulb: Highlight
 
 - **Open-Vocabulary 3D Localization.** Locate **anything** with natural language dialog!
-- **Dynamic Grounding.** Humans will be able to chat with agent to localize novel objects.
+- **Interactive Grounding.** Humans will be able to chat with an agent to localize novel objects.
 
 ## :fire: News
-- [2023-05-31] We improve the demo by adding groudning result visualization in 3D, taking pictures in real time and speeding up inference by parallelization. Try out the [new demo](http://sled-whistler.eecs.umich.edu:7777/)!
+- [2023-09-21] We released a paper [LLM-Grounder: Open-Vocabulary 3D Visual Grounding with Large Language Model as an Agent
+](https://arxiv.org/abs/2309.12311) that includes more quantitative evaluations of our pipeline!
+- [2023-05-31] We improved the demo by adding grounding result visualization in 3D, taking pictures in real time, and speeding up inference by parallelization. Try out the [new demo](http://sled-whistler.eecs.umich.edu:7777/)!
 - [2023-05-15] The first version of chat-with-nerf is available now! Please try out [demo](http://sled-whistler.eecs.umich.edu:7777/)!
 
 ## :label: TODO
