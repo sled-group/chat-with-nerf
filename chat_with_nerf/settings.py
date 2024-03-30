@@ -20,6 +20,8 @@ class Chat_With_NeRF_Settings:
     USE_OPENSCENE: bool = True
     # this flag is reserved for in the wild data
     IS_SCANNET: bool = False
+    # this flag is only used for evaluation
+    IS_EVALUATION: bool = False
 
 
 Settings = Chat_With_NeRF_Settings()
