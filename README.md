@@ -104,6 +104,18 @@ https://github.com/pengsongyou/openscene#data-preparation
 https://github.com/pengsongyou/openscene#run
 ```
 
+##### Extracting LERF embeddings
+
+We include a version of NeRFStudio code in our released docker and you can use generate point cloud function to acquire the H5 embedding. We slightly altered the ns-export function: https://docs.nerf.studio/reference/cli/ns_export.html to get the H5 embeddings.
+
+##### Evaluations
+
+We have provided four demonstrative experiments in Jupyter notebooks to assist individuals in obtaining results. Due to the large size of the H5 embeddings for each LERF, which amount to 30 GB, the data can be downloaded from the following location: <DATA-PATH>.
+
+Our repository includes demonstration code for OpenScene and LERF, both with and without GPT evaluation. These can be found under the "experiments" directory. For more detailed information, please refer to the evaluation.md document.
+
+Moreover, in the downloaded data, we provide both answers and source data for reproduce LERF and openscene.
+
 ## Related Work
 - [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
 - [LERF](https://github.com/kerrj/lerf)
