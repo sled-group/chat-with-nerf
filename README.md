@@ -91,20 +91,24 @@ pip install -e .[dev]
 
 ## :arrow_forward: Inference
 
-To run the demo:
+### Interactivve Demo
+
+We provide the code to [interactively play](http://sled-whistler.eecs.umich.edu:7777/) with our agent. To run the demo:
 
 ```
 cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ```
 
-We have provided four demonstrative experiments in Jupyter notebooks to assist individuals in obtaining results. Due to the large size of the H5 embeddings for each LERF, which amount to 30 GB, the data can be downloaded from the following location: DATA-PATH.
+### Reproduce Results in the Paper
 
-Our repository includes demonstration code for OpenScene and LERF, both with and without GPT evaluation. These can be found under the "experiments" directory. For more detailed information, please refer to the [evaluation.md](experiments/evaluation.md) document.
+We provide four Jupyter notebooks to reproduce results in the paper. To run these notebooks, please refer to the [Evaluation README](experiments/evaluation.md).
 
-Moreover, in the downloaded data, we provide both answers and source data for reproduce LERF and openscene.
+To facillate easier reproduction of our results, we provide pre-processed data [here]().
 
-### Extracting openscene embeddings
+If you would like to use your own 3D scenes, please follow the next two sections:
+
+#### Extracting openscene embeddings
 
 For extracting the openscene embeddings, we used the pre-trained Distillation model checkpoint, shared by the Openscene Authors for generating the representation. To generate the corresponding representations, kindly refer to the guidelines provided in the Openscene GitHub repository, specifically focusing on the Data Preparation and Run Sections.
 ```
@@ -112,7 +116,7 @@ https://github.com/pengsongyou/openscene#data-preparation
 https://github.com/pengsongyou/openscene#run
 ```
 
-### Extracting LERF embeddings
+#### Extracting LERF embeddings
 
 We include a version of NeRFStudio code in our released docker and you can use generate point cloud function to acquire the H5 embedding. We slightly altered the ns-export function: https://docs.nerf.studio/reference/cli/ns_export.html to get the H5 embeddings.
 
