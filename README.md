@@ -89,6 +89,8 @@ pip install -e .[dev]
 ```
 (or use your favorite virtual environment manager)
 
+## :arrow_forward: Inference
+
 To run the demo:
 
 ```
@@ -96,7 +98,13 @@ cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ```
 
-##### Extracting openscene embeddings
+We have provided four demonstrative experiments in Jupyter notebooks to assist individuals in obtaining results. Due to the large size of the H5 embeddings for each LERF, which amount to 30 GB, the data can be downloaded from the following location: DATA-PATH.
+
+Our repository includes demonstration code for OpenScene and LERF, both with and without GPT evaluation. These can be found under the "experiments" directory. For more detailed information, please refer to the [evaluation.md](experiments/evaluation.md) document.
+
+Moreover, in the downloaded data, we provide both answers and source data for reproduce LERF and openscene.
+
+### Extracting openscene embeddings
 
 For extracting the openscene embeddings, we used the pre-trained Distillation model checkpoint, shared by the Openscene Authors for generating the representation. To generate the corresponding representations, kindly refer to the guidelines provided in the Openscene GitHub repository, specifically focusing on the Data Preparation and Run Sections.
 ```
@@ -104,31 +112,24 @@ https://github.com/pengsongyou/openscene#data-preparation
 https://github.com/pengsongyou/openscene#run
 ```
 
-##### Extracting LERF embeddings
+### Extracting LERF embeddings
 
 We include a version of NeRFStudio code in our released docker and you can use generate point cloud function to acquire the H5 embedding. We slightly altered the ns-export function: https://docs.nerf.studio/reference/cli/ns_export.html to get the H5 embeddings.
 
-##### Evaluations
-
-We have provided four demonstrative experiments in Jupyter notebooks to assist individuals in obtaining results. Due to the large size of the H5 embeddings for each LERF, which amount to 30 GB, the data can be downloaded from the following location: <DATA-PATH>.
-
-Our repository includes demonstration code for OpenScene and LERF, both with and without GPT evaluation. These can be found under the "experiments" directory. For more detailed information, please refer to the evaluation.md document.
-
-Moreover, in the downloaded data, we provide both answers and source data for reproduce LERF and openscene.
 
 ## Related Work
 - [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
 - [LERF](https://github.com/kerrj/lerf)
-- [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2)
 - [LLaVA](https://github.com/haotian-liu/LLaVA)
 
 ## Citation
 ```
- @misc{chat-with-nerf-2023,
-    title = {Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog},
-    url = {https://github.com/sled-group/chat-with-nerf},
-    author = {Yang, Jianing and Chen, Xuweiyi and Qian, Shengyi and Fouhey, David and Chai, Joyce},
-    month = {May},
-    year = {2023}
+@misc{yang2023llmgrounder,
+      title={LLM-Grounder: Open-Vocabulary 3D Visual Grounding with Large Language Model as an Agent}, 
+      author={Jianing Yang and Xuweiyi Chen and Shengyi Qian and Nikhil Madaan and Madhavan Iyengar and David F. Fouhey and Joyce Chai},
+      year={2023},
+      eprint={2309.12311},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
