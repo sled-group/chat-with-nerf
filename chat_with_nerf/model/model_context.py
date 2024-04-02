@@ -24,6 +24,8 @@ from chat_with_nerf.visual_grounder.picture_taker import (
     PictureTakerFactory,
 )
 
+from chat_with_nerf.settings import Settings
+
 
 @define
 class ModelContext:
@@ -41,7 +43,9 @@ class ModelContextManager:
 
     @classmethod
     def get_model_no_gpt_context(cls, scene_name) -> ModelContext:
-        if cls.model_context is None:
+        if Settings.IS_EVALUATION:
+            return ModelContextManager.initialize_model_no_gpt_context(scene_name)
+        elif cls.model_context is None:
             cls.model_context = ModelContextManager.initialize_model_no_gpt_context(
                 scene_name
             )
@@ -49,7 +53,11 @@ class ModelContextManager:
 
     @classmethod
     def get_model_no_visual_feedback_context(cls, scene_name) -> ModelContext:
-        if cls.model_context is None:
+        if Settings.IS_EVALUATION:
+            return ModelContextManager.initialize_model_no_visual_feedback_context(
+                scene_name
+            )
+        elif cls.model_context is None:
             cls.model_context = (
                 ModelContextManager.initialize_model_no_visual_feedback_context(
                     scene_name
@@ -59,7 +67,11 @@ class ModelContextManager:
 
     @classmethod
     def get_model_context_with_gpt(cls) -> ModelContext:
-        if cls.model_context is None:
+        if Settings.IS_EVALUATION:
+            return (
+                ModelContextManager.initialize_model_no_visual_feedback_openscene_context()
+            )
+        elif cls.model_context is None:
             cls.model_context = (
                 ModelContextManager.initialize_model_no_visual_feedback_openscene_context()
             )

@@ -68,7 +68,7 @@ mv <my_path_to_llava>/llava-13b-v0 .
 
 Alternatively, you can supply a different version of LLaVA checkpoint and change `LLAVA_PATH`'s value in `chat_with_nerf/settings.py`:
 ```
-    LLAVA_PATH = "/workspace/pre-trained-weights/LLaVA/<my_llava_checkpoint>"
+LLAVA_PATH = "/workspace/pre-trained-weights/LLaVA/<my_llava_checkpoint>"
 ```
 
 Open up your directory's permission for the docker container:
@@ -89,14 +89,26 @@ pip install -e .[dev]
 ```
 (or use your favorite virtual environment manager)
 
-To run the demo:
+## :arrow_forward: Inference
+
+### Interactivve Demo
+
+We provide the code to [interactively play](http://sled-whistler.eecs.umich.edu:7777/) with our agent. To run the demo:
 
 ```
 cd /workspace/chat-with-nerf
 export $(cat .env | xargs); gradio chat_with_nerf/app.py
 ```
 
-##### Extracting openscene embeddings
+### Reproduce Results in the Paper
+
+We provide four Jupyter notebooks to reproduce results in the paper. To run these notebooks, please refer to the [Evaluation README](experiments/evaluation.md).
+
+To facillate easier reproduction of our results, we provide pre-processed data [here](https://www.dropbox.com/scl/fo/2rcihrdlq7zpbteqcg4z0/AFjWxaHrB48ddtFT9BE2j30?rlkey=g9ang0u1h69ppi9g16gj1c5n4&dl=0).
+
+If you would like to use your own 3D scenes, please follow the next two sections:
+
+#### Extracting openscene embeddings
 
 For extracting the openscene embeddings, we used the pre-trained Distillation model checkpoint, shared by the Openscene Authors for generating the representation. To generate the corresponding representations, kindly refer to the guidelines provided in the Openscene GitHub repository, specifically focusing on the Data Preparation and Run Sections.
 ```
@@ -104,19 +116,24 @@ https://github.com/pengsongyou/openscene#data-preparation
 https://github.com/pengsongyou/openscene#run
 ```
 
+#### Extracting LERF embeddings
+
+We include a version of NeRFStudio code in our released docker and you can use generate point cloud function to acquire the H5 embedding. We slightly altered the ns-export function: https://docs.nerf.studio/reference/cli/ns_export.html to get the H5 embeddings.
+
+
 ## Related Work
 - [nerfstudio](https://github.com/nerfstudio-project/nerfstudio)
 - [LERF](https://github.com/kerrj/lerf)
-- [BLIP-2](https://huggingface.co/docs/transformers/main/model_doc/blip-2)
 - [LLaVA](https://github.com/haotian-liu/LLaVA)
 
 ## Citation
 ```
- @misc{chat-with-nerf-2023,
-    title = {Chat with NeRF: Grounding 3D Objects in Neural Radiance Field through Dialog},
-    url = {https://github.com/sled-group/chat-with-nerf},
-    author = {Yang, Jianing and Chen, Xuweiyi and Qian, Shengyi and Fouhey, David and Chai, Joyce},
-    month = {May},
-    year = {2023}
+@misc{yang2023llmgrounder,
+      title={LLM-Grounder: Open-Vocabulary 3D Visual Grounding with Large Language Model as an Agent}, 
+      author={Jianing Yang and Xuweiyi Chen and Shengyi Qian and Nikhil Madaan and Madhavan Iyengar and David F. Fouhey and Joyce Chai},
+      year={2023},
+      eprint={2309.12311},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV}
 }
 ```
