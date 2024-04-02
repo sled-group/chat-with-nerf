@@ -104,7 +104,7 @@ export $(cat .env | xargs); gradio chat_with_nerf/app.py
 
 We provide four Jupyter notebooks to reproduce results in the paper. To run these notebooks, please refer to the [Evaluation README](experiments/evaluation.md).
 
-To facillate easier reproduction of our results, we provide pre-processed data [here]().
+To facillate easier reproduction of our results, we provide pre-processed data [here](https://www.dropbox.com/scl/fo/2rcihrdlq7zpbteqcg4z0/AFjWxaHrB48ddtFT9BE2j30?rlkey=g9ang0u1h69ppi9g16gj1c5n4&dl=0).
 
 If you would like to use your own 3D scenes, please follow the next two sections:
 
