@@ -68,7 +68,7 @@ mv <my_path_to_llava>/llava-13b-v0 .
 
 Alternatively, you can supply a different version of LLaVA checkpoint and change `LLAVA_PATH`'s value in `chat_with_nerf/settings.py`:
 ```
-    LLAVA_PATH = "/workspace/pre-trained-weights/LLaVA/<my_llava_checkpoint>"
+LLAVA_PATH = "/workspace/pre-trained-weights/LLaVA/<my_llava_checkpoint>"
 ```
 
 Open up your directory's permission for the docker container:
