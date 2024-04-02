@@ -91,7 +91,7 @@ pip install -e .[dev]
 
 ## :arrow_forward: Inference
 
-### Interactivve Demo
+### Interactive Demo
 
 We provide the code to [interactively play](http://sled-whistler.eecs.umich.edu:7777/) with our agent. To run the demo:
 
