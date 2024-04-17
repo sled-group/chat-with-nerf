@@ -44,11 +44,11 @@ Before running the jupyter notebooks, update the `root_directory` variable with 
 There are 3 coordinate systems: 
 - A. OpenScene coordinate system
 - B. LERF coordinate system
-- C. Original Scannet coordinate system (your own custom dataset coordinate system)
+- C. Original Scannet coordinate system (or your own custom dataset coordinate system)
 
 ### Evaluate on OpenScene:
 
-To convert from coordinate system A to coordinate system C, coordinate system A has the same set of points in the same ording as in coordinate system C. To evaluate on ScanRefer using OpenScene, we can first look at which set of points is lit up in system A and those would be the set lit up in system C. And we can calculate mIOU in system C.
+To convert from coordinate system A to coordinate system C, coordinate system A has the same set of points in the same ordering as in coordinate system C. To evaluate ScanRefer using OpenScene, we can first look at the points grounded by OpenScene in system A, and use those points' indices to index into system C. Then, we can calculate mIoU in system C.
 
 See this line for where we index into system C using the cluster we obtained from system A:
 ```
@@ -57,9 +57,9 @@ https://github.com/sled-group/chat-with-nerf/blob/b769c68e3862d8ea83f2756836f244
 
 ### Evaluate on LERF:
 
-To convert from coordinate system B to coordinate system C, we need a transformation matrix which has been pre-calculated and provide in the data. And we can calculate mIOU in system C.
+To convert from coordinate system B to coordinate system C, we need a transformation matrix that has been pre-calculated and provided in the downloadable pre-processed data. Then, we can calculate mIOU in system C.
 
-We use the transformation matrix to transform bbox in system B into system C:
+We use the transformation matrix to transform b-boxes in system B into system C:
 ```
 https://github.com/sled-group/chat-with-nerf/blob/b769c68e3862d8ea83f2756836f244d93ce4b980/chat_with_nerf/visual_grounder/picture_taker.py#L173
 ```
