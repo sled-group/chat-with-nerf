@@ -106,9 +106,11 @@ We provide four Jupyter notebooks to reproduce results in the paper. To run thes
 
 To facillate easier reproduction of our results, we provide pre-processed data [here](https://www.dropbox.com/scl/fo/2rcihrdlq7zpbteqcg4z0/AFjWxaHrB48ddtFT9BE2j30?rlkey=g9ang0u1h69ppi9g16gj1c5n4&dl=0).
 
+### Preprocess / Preprare your own Data
+
 If you would like to use your own 3D scenes, please follow the next two sections:
 
-#### Extracting openscene embeddings
+##### Extracting openscene embeddings
 
 For extracting the openscene embeddings, we used the pre-trained Distillation model checkpoint, shared by the Openscene Authors for generating the representation. To generate the corresponding representations, kindly refer to the guidelines provided in the Openscene GitHub repository, specifically focusing on the Data Preparation and Run Sections.
 ```
@@ -116,7 +118,7 @@ https://github.com/pengsongyou/openscene#data-preparation
 https://github.com/pengsongyou/openscene#run
 ```
 
-#### Extracting LERF embeddings
+##### Extracting LERF embeddings
 
 We include a version of NeRFStudio code in our released docker and you can use generate point cloud function to acquire the H5 embedding. We slightly altered the ns-export function: https://docs.nerf.studio/reference/cli/ns_export.html to get the H5 embeddings.
 
