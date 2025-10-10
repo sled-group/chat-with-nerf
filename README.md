@@ -95,7 +95,7 @@ pip install -e .[dev]
 
 Write your OpenAI API key and URL in a `/workspace/chat-with-nerf/.env` file:
 ```
-API_URL=https://XXXXXXXXXXXXXX.openai.azure.com/
+API_URL=https://XXXXXXXXXXXXXXXX.openai.azure.com/openai/deployments/gpt-4-8k/chat/completions?api-version=2023-03-15-preview
 OPENAI_API_KEY=XXXXXXXXXXXXXXXXXXXX
 ```
 
