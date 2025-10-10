@@ -79,7 +79,7 @@ chmod -R 777 .
 
 If using Docker, you can use the following command to spin up a docker container with **chat-with-nerf** mounted under workspace
 ```bash
-docker run --gpus "device=0" -v /<parent_path_chat-with-nerf>/:/workspace/ -v /home/<your_username>/.cache/:/home/user/.cache/ --rm -it --shm-size=12gb chat-with-nerf:latest
+docker run --gpus "device=0" -p 7777:7777 -v /<parent_path_chat-with-nerf>/:/workspace/ -v /home/<your_username>/.cache/:/home/user/.cache/ --rm -it --shm-size=12gb chat-with-nerf:latest
 ```
 Then install Chat with NeRF dependencies
 ```bash
