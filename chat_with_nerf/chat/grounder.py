@@ -296,7 +296,7 @@ def ground_with_gpt(
         },
     }
     if len(landmark_location_list) > 0:
-        evaluation["Targe Candidate Distance to Landmark (meter)"] = {
+        evaluation["Target Candidate Distance to Landmark (meter)"] = {
             str(i): round(
                 math.sqrt(
                     (bbox["centroid"][0] - landmark_location_centroid[0]) ** 2

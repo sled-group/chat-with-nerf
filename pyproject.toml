@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 include-package-data = false
 
 [tool.setuptools.packages.find]
-include = ["chat_with_nerf"]
+include = ["chat_with_nerf*"]
 
 [project]
 name = "chat_with_nerf"
